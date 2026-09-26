@@ -1,7 +1,16 @@
 name: gdrm_sdk
-description: "GDRM Enterprise SDK - Next-Gen Proprietary Hardware-Locked DRM & Secure Document Viewer for Flutter applications."
+description: "Enterprise DRM & Hardware-Locked Secure PDF & GDRM Document Viewer SDK with Dynamic Forensic Watermarking."
 version: 1.0.0
-homepage: https://gdrm-ecosystem.web.app
+homepage: https://github.com/Gauruuu/GDRM
+repository: https://github.com/Gauruuu/GDRM/tree/main/packages/gdrm_sdk
+issue_tracker: https://github.com/Gauruuu/GDRM/issues
+
+topics:
+  - drm
+  - pdf
+  - security
+  - watermark
+  - document-viewer
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
