@@ -1,0 +1,15 @@
+{
+  "hosting": {
+    "site": "gdrm",
+    "public": "website",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "downloads/**"
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

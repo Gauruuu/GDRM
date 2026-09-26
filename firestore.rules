@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── App OTA Updates & Broadcasts ──
+    match /gdrm_app_updates/{document=**} {
+      allow read, write: if true;
+    }
+
+    // ── User Identity & Account Profiles ──
+    match /gdrm_users/{document=**} {
+      allow read, write: if true;
+    }
+
+    // ── Piracy Breach Telemetry Alerts ──
+    match /gdrm_piracy_alerts/{document=**} {
+      allow read, write: if true;
+    }
+
+    // ── SnailTrail Audit Event Logs ──
+    match /gdrm_snail_trails/{document=**} {
+      allow read, write: if true;
+    }
+
+    // ── Default Fallback ──
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

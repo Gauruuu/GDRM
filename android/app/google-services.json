@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "936537359592",
+    "project_id": "gdrm-userbase",
+    "storage_bucket": "gdrm-userbase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:936537359592:android:b1663ac4b110f78515355d",
+        "android_client_info": {
+          "package_name": "com.hlp.gdrm_ecosystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCw328YsMnQigv6xxk8n0ED9VcT-IfDoY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

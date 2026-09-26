@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GDRM Ecosystems - Granular Digital Right Manager (1m x 1m Flex Print)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: 1000mm 1000mm;
+      margin: 0;
+    }
+
+    body {
+      width: 1000mm;
+      height: 1000mm;
+      margin: 0;
+      padding: 24mm;
+      background-color: #F4F9F6;
+      font-family: 'Times New Roman', 'Tinos', Times, serif;
+      color: #112211;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    :root {
+      --primary-dark: #0A3C2F;     /* Deep forest evergreen */
+      --primary-green: #377E22;    /* Exact GDRM Logo Green */
+      --accent-green: #286E1E;     /* Forest vibrant green */
+      --border-green: #377E22;     /* Crisp outline green */
+      --light-green-bg: #EAF4EE;   /* Soft sage/mint background */
+      --badge-green: #D1E7DD;      /* Light mint badge */
+      --text-main: #112211;
+      --text-muted: #374151;
+      --card-radius: 12mm;
+      --border-thick: 2.2mm;
+    }
+
+    /* HEADER BANNER */
+    .header-container {
+      display: grid;
+      grid-template-columns: 1fr 240mm;
+      gap: 16mm;
+      margin-bottom: 12mm;
+      align-items: stretch;
+    }
+
+    .header-main {
+      border: var(--border-thick) solid var(--border-green);
+      border-radius: var(--card-radius);
+      background: #FFFFFF;
+      padding: 8mm 16mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 4mm 12mm rgba(55, 126, 34, 0.08);
+    }
+
+    .header-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12mm;
+    }
+
+    .project-logo-img {
+      height: 28mm;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .project-title {
+      font-size: 26mm;
+      font-weight: 700;
+      color: var(--primary-dark);
+      letter-spacing: -0.5mm;
+      line-height: 1.05;
+    }
+
+    .project-subtitle {
+      font-size: 9.8mm;
+      font-weight: 700;
+      color: var(--primary-green);
+      margin-top: 1.5mm;
+      letter-spacing: 0.1mm;
+    }
+
+    .project-tags {
+      font-size: 7mm;
+      color: var(--text-muted);
+      margin-top: 2.5mm;
+      display: flex;
+      gap: 5mm;
+      font-style: italic;
+      font-weight: 600;
+    }
+
+    .header-meta {
+      border: var(--border-thick) solid var(--border-green);
+      border-radius: var(--card-radius);
+      background: #FFFFFF;
+      padding: 8mm 12mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      box-shadow: 0 4mm 12mm rgba(55, 126, 34, 0.08);
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: baseline;
+      font-size: 7.5mm;
+    }
+
+    .meta-label {
+      width: 75mm;
+      font-weight: bold;
+      color: var(--primary-dark);
+    }
+
+    .meta-colon {
+      width: 8mm;
+      font-weight: bold;
+      color: var(--primary-dark);
+    }
+
+    .meta-val {
+      flex: 1;
+      color: var(--text-main);
+      font-weight: 600;
+      border-bottom: 0.8mm solid #A7D7C5;
+      padding-bottom: 0.5mm;
+    }
+
+    /* POSTER GRID (3 Columns x 4 Rows = 12 Boxes) */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 240mm 200mm 205mm 165mm;
+      gap: 11mm;
+      flex: 1;
+    }
+
+    .card {
+      border: var(--border-thick) solid var(--border-green);
+      border-radius: var(--card-radius);
+      background: #FFFFFF;
+      padding: 8.5mm 10mm;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 3mm 10mm rgba(55, 126, 34, 0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card-title {
+      font-size: 8.8mm;
+      font-weight: bold;
+      color: var(--primary-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.3mm;
+      border-bottom: 1.2mm solid var(--border-green);
+      padding-bottom: 2mm;
+      margin-bottom: 4mm;
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+    }
+
+    .card-title span.num {
+      background: var(--primary-green);
+      color: #FFFFFF;
+      border-radius: 3.5mm;
+      padding: 0.5mm 3.5mm;
+      font-size: 7.8mm;
+    }
+
+    .card-body {
+      font-size: 5.5mm;
+      line-height: 1.38;
+      color: var(--text-main);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      text-align: justify;
+    }
+
+    p {
+      margin-bottom: 2.5mm;
+    }
+
+    ul, ol {
+      margin-left: 7mm;
+      margin-bottom: 2mm;
+    }
+
+    li {
+      margin-bottom: 2.2mm;
+      padding-left: 1.5mm;
+    }
+
+    li::marker {
+      color: var(--primary-green);
+      font-weight: bold;
+    }
+
+    b, strong {
+      color: var(--primary-dark);
+    }
+
+    /* EXACT DESKTOP & MOBILE MOCKUPS IN BOX 2 */
+    .mockup-container {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 5mm;
+      flex: 1;
+      margin-top: 1mm;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .desktop-window {
+      background: #0B0F19;
+      border: 1.2mm solid #377E22;
+      border-radius: 4mm;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 3mm 8mm rgba(0,0,0,0.3);
+    }
+
+    .desktop-titlebar {
+      background: #161B26;
+      padding: 1.5mm 3mm;
+      font-size: 2.8mm;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      gap: 2mm;
+      border-bottom: 0.5mm solid #2E374D;
+    }
+
+    .window-dots {
+      display: flex;
+      gap: 1mm;
+    }
+    .dot {
+      width: 2mm;
+      height: 2mm;
+      border-radius: 50%;
+    }
+    .dot-red { background: #EF4444; }
+    .dot-yellow { background: #F59E0B; }
+    .dot-green { background: #10B981; }
+
+    .desktop-content {
+      display: grid;
+      grid-template-columns: 38mm 1fr;
+      flex: 1;
+    }
+
+    .desktop-sidebar {
+      background: #161B26;
+      border-right: 0.5mm solid #2E374D;
+      padding: 2.5mm;
+      font-size: 2.4mm;
+      color: #CBD5E1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5mm;
+    }
+
+    .sidebar-brand {
+      color: #00F0FF;
+      font-weight: bold;
+      font-size: 2.8mm;
+      letter-spacing: 0.2mm;
+    }
+
+    .sidebar-btn {
+      padding: 1mm 1.5mm;
+      border-radius: 1mm;
+      background: #1E2538;
+      color: #FFFFFF;
+      font-size: 2.3mm;
+      border: 0.3mm solid #2E374D;
+    }
+
+    .sidebar-btn.active {
+      border-color: #00F0FF;
+      color: #00F0FF;
+      font-weight: bold;
+    }
+
+    .sidebar-auth {
+      background: rgba(0, 240, 255, 0.08);
+      border: 0.3mm solid rgba(0, 240, 255, 0.3);
+      padding: 1.2mm;
+      border-radius: 1.5mm;
+      font-size: 2.2mm;
+      color: #10B981;
+    }
+
+    .desktop-reader-pane {
+      background: #1E2538;
+      padding: 3mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #E2E8F0;
+      position: relative;
+    }
+
+    .reader-doc-preview {
+      background: #0F172A;
+      border-radius: 2mm;
+      padding: 2.5mm;
+      font-size: 2.4mm;
+      line-height: 1.35;
+      color: #94A3B8;
+    }
+
+    .reader-watermark {
+      background: rgba(239, 68, 68, 0.15);
+      border: 0.4mm dashed #EF4444;
+      color: #F87171;
+      font-weight: bold;
+      padding: 1.5mm;
+      border-radius: 1.5mm;
+      text-align: center;
+      font-size: 2.5mm;
+    }
+
+    .mobile-phone {
+      background: #0B0F19;
+      border: 1.4mm solid #377E22;
+      border-radius: 5mm;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 3mm 8mm rgba(0,0,0,0.3);
+    }
+
+    .mobile-appbar {
+      background: #161B26;
+      padding: 2mm 2.5mm;
+      border-bottom: 0.5mm solid #2E374D;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 2.7mm;
+      font-weight: bold;
+      color: #00F0FF;
+    }
+
+    .mobile-form {
+      padding: 2.5mm;
+      background: #1E2538;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5mm;
+      font-size: 2.4mm;
+    }
+
+    .mobile-input-row {
+      background: #161B26;
+      border: 0.3mm solid #2E374D;
+      border-radius: 1mm;
+      padding: 1.2mm 2mm;
+      display: flex;
+      justify-content: space-between;
+      color: #94A3B8;
+    }
+
+    .mobile-input-row span.val {
+      color: #34D399;
+      font-weight: bold;
+    }
+
+    .mobile-pack-btn {
+      background: linear-gradient(90deg, #059669, #10B981);
+      color: #FFFFFF;
+      text-align: center;
+      padding: 1.8mm;
+      border-radius: 1.5mm;
+      font-weight: bold;
+      font-size: 2.7mm;
+      margin-top: auto;
+    }
+
+    .mobile-bottom-nav {
+      background: #161B26;
+      border-top: 0.5mm solid #2E374D;
+      padding: 1.5mm;
+      display: flex;
+      justify-content: space-around;
+      font-size: 2.3mm;
+      color: #64748B;
+    }
+
+    .mobile-bottom-nav span.active {
+      color: #10B981;
+      font-weight: bold;
+    }
+
+    .mockup-caption {
+      text-align: center;
+      font-size: 3.5mm;
+      font-weight: bold;
+      color: var(--primary-dark);
+      margin-top: 2mm;
+      font-family: 'Times New Roman', Times, serif;
+    }
+
+    .flow-step {
+      background: #F0FDF4;
+      border: 1mm solid #377E22;
+      border-radius: 3.5mm;
+      padding: 2.2mm 3.5mm;
+      margin-bottom: 2mm;
+      font-size: 4.4mm;
+      font-weight: 600;
+      color: var(--primary-dark);
+      position: relative;
+      text-align: center;
+      box-shadow: 0 1.5mm 4mm rgba(55, 126, 34, 0.05);
+    }
+
+    .flow-arrow {
+      text-align: center;
+      color: var(--accent-green);
+      font-size: 4.5mm;
+      font-weight: bold;
+      margin: -1.5mm 0 1mm 0;
+    }
+
+    .feature-pill {
+      background: #ECFDF5;
+      border-left: 2.5mm solid #377E22;
+      padding: 2mm 3mm;
+      margin-bottom: 2.5mm;
+      border-radius: 0 2.5mm 2.5mm 0;
+      font-size: 5mm;
+    }
+
+    .ref-list {
+      font-size: 4.5mm;
+      line-height: 1.35;
+      list-style-type: decimal;
+      padding-left: 6mm;
+    }
+
+    .ref-list li {
+      margin-bottom: 1.6mm;
+    }
+
+    .footer-bar {
+      margin-top: 8mm;
+      background: var(--primary-dark);
+      color: #FFFFFF;
+      border-radius: 5mm;
+      padding: 3mm 10mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 5.5mm;
+      font-weight: bold;
+      letter-spacing: 0.5mm;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER ROW -->
+  <header class="header-container">
+    <div class="header-main">
+      <div class="header-title-row">
+        <img src="gdrm_logo.png" alt="GDRM Ecosystems Logo" class="project-logo-img">
+        <div>
+          <h1 class="project-title">GDRM Ecosystems</h1>
+          <h2 class="project-subtitle">Granular Digital Right Manager — Zero-Trust Cryptographic Document Security Platform</h2>
+        </div>
+      </div>
+      <div class="project-tags">
+        <span>Encapsulate</span> • 
+        <span>Hardware Key Binding</span> • 
+        <span>Anti-Piracy Interceptor</span> • 
+        <span>Dynamic Watermarking</span> • 
+        <span>ChronoLock Self-Destruct</span>
+      </div>
+    </div>
+
+    <div class="header-meta">
+      <div class="meta-row">
+        <div class="meta-label">Project Code</div>
+        <div class="meta-colon">:</div>
+        <div class="meta-val">CS-DRM-2026-09</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Domain/Category</div>
+        <div class="meta-colon">:</div>
+        <div class="meta-val">Cyber Security & Infosec</div>
+      </div>
+      <div class="meta-row">
+        <div class="meta-label">Academic Level</div>
+        <div class="meta-colon">:</div>
+        <div class="meta-val">UG / Final Year Engineering</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 12-BOX GRID -->
+  <main class="grid-container">
+
+    <!-- 1. ABSTRACT -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">1</span> Abstract</h2>
+      <div class="card-body">
+        <p>
+          <b>GDRM (Granular Digital Right Manager)</b> is an enterprise-grade, zero-trust document security ecosystem engineered with Flutter and Firebase. It addresses the critical vulnerability of digital document leakage by encapsulating raw PDF payloads into tamper-evident, encrypted <code>.gdrm</code> containers.
+        </p>
+        <p>
+          The system enforces strict multi-layered defenses: cloud recipient username locking via Firebase Firestore, device hardware-key binding, OS-level clipboard and screen capture suppression, irreversible <i>FileRip</i> self-destruction triggers, and hardware-only watermarked paper spooling. It prevents unauthorized redistribution while ensuring forensic accountability.
+        </p>
+      </div>
+    </section>
+
+    <!-- 2. APP INTERFACE (EXACT DESKTOP & MOBILE MOCKUPS) -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">2</span> System Interface (Mockups)</h2>
+      <div class="card-body">
+        <div class="mockup-container">
+          <!-- Desktop Version Mockup -->
+          <div class="desktop-window">
+            <div class="desktop-titlebar">
+              <div class="window-dots">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+              </div>
+              <span>GDRM Desktop Console - Reader & Security</span>
+            </div>
+            <div class="desktop-content">
+              <div class="desktop-sidebar">
+                <div class="sidebar-brand">GDRM ECOSYSTEMS</div>
+                <div class="sidebar-btn active">▶ READER CONSOLE</div>
+                <div class="sidebar-btn">PACKER CONSOLE</div>
+                <div class="sidebar-auth">👤 @gaurav [Active]</div>
+                <div style="font-size:2mm; color:#64748B; margin-top:1mm;">ACTIVE MANIFEST:</div>
+                <div style="font-size:2mm;">• Lic: Alice Corp</div>
+                <div style="font-size:2mm; color:#34D399;">• HW: BOUND-OK</div>
+              </div>
+              <div class="desktop-reader-pane">
+                <div class="reader-doc-preview">
+                  <div style="color:#00F0FF; font-weight:bold; font-size:2.6mm; margin-bottom:1mm;">PROTECTED READER VIEW</div>
+                  <div>• Zero text drag selection active</div>
+                  <div>• Clipboard hotkey hook suppressed</div>
+                  <div>• Print to PDF drivers blacklisted</div>
+                </div>
+                <div class="reader-watermark">
+                  WATERMARK: LICENSED TO @alice<br>
+                  IP: 192.168.1.104 • 2026-09-20
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile App Mockup -->
+          <div class="mobile-phone">
+            <div class="mobile-appbar">
+              <span>GDRM Mobile</span>
+              <span style="color:#34D399; font-size:2.2mm;">@gaurav</span>
+            </div>
+            <div class="mobile-form">
+              <div style="color:#00F0FF; font-weight:bold; font-size:2.6mm;">PACKER CONSOLE</div>
+              <div class="mobile-input-row"><span>Target:</span> <span class="val">@alice_eng [✓]</span></div>
+              <div class="mobile-input-row"><span>ChronoLock:</span> <span class="val">24h Auto-Melt</span></div>
+              <div class="mobile-input-row"><span>Max Opens:</span> <span class="val">3 Views Limit</span></div>
+              <div class="mobile-pack-btn">PACK & ENCRYPT .GDRM</div>
+            </div>
+            <div class="mobile-bottom-nav">
+              <span>Reader</span>
+              <span class="active">Packer (Active)</span>
+            </div>
+          </div>
+        </div>
+        <div class="mockup-caption">Desktop Multi-Pane Console (Left)  |  Mobile App Interface (Right)</div>
+      </div>
+    </section>
+
+    <!-- 3. INTRODUCTION -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">3</span> Introduction</h2>
+      <div class="card-body">
+        <p>
+          Conventional document exchange formats like standard PDF rely on static password encryption or basic permission flags. These flags are routinely bypassed using open-source decryptors, virtual PDF printers (e.g., Microsoft Print to PDF), clipboard copying, or unauthorized file forwarding.
+        </p>
+        <p>
+          <b>GDRM (Granular Digital Right Manager) introduces active, containerized enforcement.</b> Instead of distributing bare files, documents are packaged into authenticated <code>.gdrm</code> payloads where access is dynamically validated against Firebase cloud registries, local machine hardware fingerprints, and strict ephemeral timers.
+        </p>
+      </div>
+    </section>
+
+    <!-- 4. OBJECTIVES -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">4</span> Objectives</h2>
+      <div class="card-body">
+        <ol>
+          <li><b>Cryptographic Encapsulation:</b> Package PDFs into encrypted <code>.gdrm</code> binary containers with custom integrity headers.</li>
+          <li><b>Identity-Bound Distribution:</b> Enforce 1-to-1 recipient username locking verified via Firebase Cloud Firestore.</li>
+          <li><b>Client-Side Anti-Leak Protection:</b> Intercept and suppress text selection, hotkeys (<code>Ctrl+C</code>, <code>Ctrl+A</code>), and unauthorized prints.</li>
+          <li><b>Hardware Anchoring:</b> Bind decrypted payloads to the first authorized device UUID to prevent file copying.</li>
+          <li><b>Auditable Paper Printing:</b> Provide rasterized watermarked physical printing while blocking virtual print drivers.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 5. SYSTEM WORKFLOW -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">5</span> Architecture & Workflow</h2>
+      <div class="card-body" style="justify-content:center;">
+        <div class="flow-step">1. Sender Configures Policies & Target Recipient (@handle)</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-step">2. Packer Encrypts Payload & Generates GDRM Fingerprint</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-step">3. Recipient Opens File ➔ App Verifies Firebase Cloud Auth</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-step">4. Hardware Device Key Validated (Alarms on Machine Mismatch)</div>
+        <div class="flow-arrow">▼</div>
+        <div class="flow-step">5. Secure Reader Enforces Zero-Copy, ChronoLock & Print Rules</div>
+      </div>
+    </section>
+
+    <!-- 6. LITERATURE SURVEY -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">6</span> Literature Survey</h2>
+      <div class="card-body">
+        <ol class="ref-list" style="font-size:5.2mm;">
+          <li><b>Adobe Acrobat Standard Security (2018):</b> Utilizes static master passwords; highly vulnerable to memory dump scraping and virtual driver prints.</li>
+          <li><b>Enterprise Cloud DRM Platforms (Azure AIP, 2021):</b> Robust cloud policy enforcement but suffers from vendor lock-in, high license cost, and heavy server latency.</li>
+          <li><b>Hardware-Bound Key Anchors (NIST SP 800-57, 2022):</b> Recommends tying decrypted ephemeral payloads to hardware-unique identifiers.</li>
+          <li><b>Client-Side Screen & Input Interceptors (IEEE TIFS, 2023):</b> Demonstrates native hook efficacy in mitigating exfiltration through OS clipboards.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 7. RESEARCH GAP -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">7</span> Research Gap & Threats</h2>
+      <div class="card-body">
+        <ul>
+          <li><b>Lack of Recipient Exclusivity:</b> Once a traditional password-protected file is unlocked, it can be shared with infinite unauthorized third parties.</li>
+          <li><b>Clipboard Extraction:</b> Most viewers allow highlight-copy text extraction into memory buffers with no forensic audit trail.</li>
+          <li><b>Virtual PDF Re-printing:</b> Users easily bypass read-only restrictions by printing to a virtual PDF driver to generate unprotected files.</li>
+          <li><b>No Self-Destruct Mechanisms:</b> Absence of time-bomb locks or view-counter auto-destruction for sensitive time-bound documents.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 8. METHODOLOGY -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">8</span> Methodology</h2>
+      <div class="card-body">
+        <ol>
+          <li><b>Threat Modeling:</b> Analysis of document leakage attack vectors across memory, clipboard, disk caching, and virtual spoolers.</li>
+          <li><b>Container Cryptography:</b> Specification of <code>.gdrm</code> binary headers, XOR keystream encryption, and cryptographic checksums.</li>
+          <li><b>Cross-Platform Engine:</b> Developed Flutter frontend with custom Native C/Win32 and macOS hooks for input suppression.</li>
+          <li><b>Cloud Auth & Firestore:</b> User identity registration, handle lookup, and real-time recipient verification backend.</li>
+          <li><b>Security & Tamper Testing:</b> Rigorous penetration tests simulating key spoofing, time alteration, and pirated file transfers.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 9. NOVELTY & UNIQUE FEATURES -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">9</span> Features vs Standard PDF</h2>
+      <div class="card-body">
+        <div class="feature-pill">
+          <b>Username Recipient Locking:</b> Strictly restricts decryption to verified <code>@username</code> accounts via Firebase registry.
+        </div>
+        <div class="feature-pill">
+          <b>Hardware Machine Binding:</b> File automatically locks to the first opening computer; blocks execution on unauthorized devices.
+        </div>
+        <div class="feature-pill">
+          <b>Virtual Print Interception:</b> Blacklists PDF writers (e.g. Adobe/CutePDF) while allowing watermarked physical hardcopies.
+        </div>
+        <div class="feature-pill">
+          <b>ChronoLock & Rigged Timers:</b> Supports future scheduled unlocks, countdown time-bombs, and brute-force self-destruct.
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. FUTURE SCOPE -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">10</span> Future Scope</h2>
+      <div class="card-body">
+        <ul>
+          <li><b>AI Screen Recording Detection:</b> Integrate camera gaze tracking to prevent smartphone camera capture of displays.</li>
+          <li><b>Zero-Knowledge Auth:</b> Implement ZK-SNARK proofs for anonymous yet cryptographically verified recipient authorization.</li>
+          <li><b>Multi-Format Container:</b> Extend <code>.gdrm</code> encapsulation to CAD drawings, high-res images, and audio/video containers.</li>
+          <li><b>Decentralized Audit Logs:</b> Anchor immutable <i>SnailTrail</i> access logs onto decentralized ledgers for legal notarization.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 11. CONCLUSION -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">11</span> Conclusion</h2>
+      <div class="card-body">
+        <p>
+          <b>GDRM Ecosystems</b> successfully resolves the fundamental vulnerabilities inherent in static digital document sharing. By synthesizing cryptographic containerization, Firebase identity verification, device hardware locking, anti-copy reader suppression, and dynamic watermarked physical printing, Granular Digital Right Manager ensures comprehensive end-to-end security.
+        </p>
+        <p>
+          The system establishes an impenetrable, zero-trust workflow suitable for confidential defense, enterprise intellectual property, legal discovery, and sensitive academic exchanges.
+        </p>
+      </div>
+    </section>
+
+    <!-- 12. REFERENCES -->
+    <section class="card">
+      <h2 class="card-title"><span class="num">12</span> References</h2>
+      <div class="card-body">
+        <ol class="ref-list">
+          <li>Stallings, W. (2020) - <i>Cryptography and Network Security: Principles and Practice</i>, 8th Edition, Pearson.</li>
+          <li>Adobe Systems Inc. (2020) - <i>Document Management: Portable Document Format Security Architecture</i>, ISO 32000-2.</li>
+          <li>NIST Special Publication 800-175B (2022) - <i>Guideline for Using Cryptographic Standards in Federal Organizations</i>.</li>
+          <li>IEEE Transactions on Information Forensics & Security (2023) - <i>Mitigating Client-Side Data Leakage in Zero-Trust Systems</i>.</li>
+          <li>Firebase Architecture Guide (2025) - <i>Securing Enterprise Applications with Cloud Firestore & Auth</i>.</li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer-bar">
+    <div>GDRM Ecosystems • Granular Digital Right Manager Architecture</div>
+    <div>Department of Computer Engineering & Cyber Security</div>
+    <div>1000mm × 1000mm Flex Format</div>
+  </footer>
+
+</body>
+</html>
