@@ -29,12 +29,12 @@ class AccountProfileDialog extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 480),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A), // Dark slate glass
+          color: AppTheme.bgGlassPanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.colorCyan.withOpacity(0.5), width: 1.5),
+          border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.7),
+              color: AppTheme.shadowDeep,
               blurRadius: 30,
               offset: const Offset(0, 10),
             ),
@@ -49,14 +49,14 @@ class AccountProfileDialog extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppTheme.colorCyan.withOpacity(0.2),
+                  backgroundColor: AppTheme.colorCyan.withValues(alpha: 0.2),
                   child: Text(
                     state.cloudDisplayName?.isNotEmpty == true
                         ? state.cloudDisplayName![0].toUpperCase()
                         : (state.cloudUsername?.isNotEmpty == true
                             ? state.cloudUsername![0].toUpperCase()
                             : 'U'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.colorCyan,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -72,7 +72,7 @@ class AccountProfileDialog extends StatelessWidget {
                         state.cloudDisplayName?.isNotEmpty == true
                             ? state.cloudDisplayName!
                             : (state.cloudUsername ?? 'GDRM User'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.fgLight,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -80,7 +80,7 @@ class AccountProfileDialog extends StatelessWidget {
                       ),
                       Text(
                         state.cloudUsername != null ? '@${state.cloudUsername}' : 'Unauthenticated',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.colorCyan,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -90,13 +90,13 @@ class AccountProfileDialog extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppTheme.fgMuted, size: 22),
+                  icon: Icon(Icons.close_rounded, color: AppTheme.fgMuted, size: 22),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
             const SizedBox(height: 18),
-            const Divider(color: AppTheme.borderGlass),
+            Divider(color: AppTheme.borderGlass),
             const SizedBox(height: 14),
 
             // ── Email & Verification Status ──
@@ -104,23 +104,23 @@ class AccountProfileDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppTheme.borderGlass),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.email_outlined, color: AppTheme.fgMuted, size: 18),
+                    Icon(Icons.email_outlined, color: AppTheme.fgMuted, size: 18),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('REGISTERED EMAIL', style: TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          Text('REGISTERED EMAIL', style: TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                           const SizedBox(height: 2),
                           Text(
                             state.cloudEmail!,
-                            style: const TextStyle(color: AppTheme.fgLight, fontSize: 13, fontWeight: FontWeight.w500),
+                            style: TextStyle(color: AppTheme.fgLight, fontSize: 13, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -133,13 +133,13 @@ class AccountProfileDialog extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: state.isEmailVerified
-                              ? Colors.greenAccent.withOpacity(0.15)
-                              : AppTheme.colorCyan.withOpacity(0.15),
+                              ? Colors.greenAccent.withValues(alpha: 0.15)
+                              : AppTheme.colorCyan.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: state.isEmailVerified
-                                ? Colors.greenAccent.withOpacity(0.5)
-                                : AppTheme.colorCyan.withOpacity(0.5),
+                                ? Colors.greenAccent.withValues(alpha: 0.5)
+                                : AppTheme.colorCyan.withValues(alpha: 0.5),
                           ),
                         ),
                         child: Row(
@@ -152,11 +152,12 @@ class AccountProfileDialog extends StatelessWidget {
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              state.isEmailVerified ? 'Verified' : 'Verify Email (OTP)',
+                              state.isEmailVerified ? 'VERIFIED' : 'VERIFY EMAIL',
                               style: TextStyle(
                                 color: state.isEmailVerified ? Colors.greenAccent : AppTheme.colorCyan,
-                                fontSize: 11,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
+                                letterSpacing: 0.4,
                               ),
                             ),
                           ],
@@ -169,9 +170,47 @@ class AccountProfileDialog extends StatelessWidget {
               const SizedBox(height: 12),
             ],
 
-            // ── Piracy & Security Alerts Button ──
+            // ── Account ID / UID Info Tile ──
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.borderGlass),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.fingerprint_rounded, color: AppTheme.colorAmber, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('FIREBASE IDENTITY UID', style: TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        const SizedBox(height: 2),
+                        Text(
+                          state.cloudUid ?? (FirebaseAuth.instance.currentUser?.uid ?? 'Local Anonymous Session'),
+                          style: TextStyle(
+                            color: AppTheme.fgLight,
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Piracy & Threat Alert Quick Action ──
             if (state.cloudUsername != null)
               InkWell(
+                borderRadius: BorderRadius.circular(8),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.of(context).push(
@@ -181,49 +220,57 @@ class AccountProfileDialog extends StatelessWidget {
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: state.unreadPiracyAlertsCount > 0
-                        ? Colors.redAccent.withOpacity(0.12)
-                        : const Color(0xFF1E293B),
+                        ? Colors.redAccent.withValues(alpha: 0.12)
+                        : (AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: state.unreadPiracyAlertsCount > 0
-                          ? Colors.redAccent.withOpacity(0.6)
+                          ? Colors.redAccent.withValues(alpha: 0.5)
                           : AppTheme.borderGlass,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        state.unreadPiracyAlertsCount > 0
-                            ? Icons.warning_amber_rounded
-                            : Icons.shield_outlined,
-                        color: state.unreadPiracyAlertsCount > 0
-                            ? Colors.redAccent
-                            : AppTheme.colorCyan,
-                        size: 18,
+                        state.unreadPiracyAlertsCount > 0 ? Icons.warning_amber_rounded : Icons.shield_outlined,
+                        color: state.unreadPiracyAlertsCount > 0 ? Colors.redAccent : AppTheme.colorCyan,
+                        size: 20,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
-                          'SECURITY & PIRACY ALERTS',
-                          style: TextStyle(
-                            color: state.unreadPiracyAlertsCount > 0
-                                ? Colors.redAccent
-                                : AppTheme.fgLight,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'PIRACY & INCIDENT ALERTS',
+                              style: TextStyle(
+                                color: state.unreadPiracyAlertsCount > 0 ? Colors.redAccent : AppTheme.fgLight,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              state.unreadPiracyAlertsCount > 0
+                                  ? '${state.unreadPiracyAlertsCount} unread piracy / failed auth warning(s)'
+                                  : 'Real-time copyright enforcement logs',
+                              style: TextStyle(
+                                color: state.unreadPiracyAlertsCount > 0 ? Colors.redAccent : AppTheme.fgMuted,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       if (state.unreadPiracyAlertsCount > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: Colors.redAccent,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '${state.unreadPiracyAlertsCount} NEW',
@@ -240,7 +287,7 @@ class AccountProfileDialog extends StatelessWidget {
               ),
 
             const SizedBox(height: 20),
-            const Divider(color: AppTheme.borderGlass),
+            Divider(color: AppTheme.borderGlass),
             const SizedBox(height: 14),
 
             // ── Primary Actions: Switch User & Sign Out ──
@@ -250,7 +297,7 @@ class AccountProfileDialog extends StatelessWidget {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.colorCyan,
-                      side: BorderSide(color: AppTheme.colorCyan.withOpacity(0.5)),
+                      side: BorderSide(color: AppTheme.colorCyan.withValues(alpha: 0.5)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -268,10 +315,10 @@ class AccountProfileDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent.withOpacity(0.18),
+                      backgroundColor: Colors.redAccent.withValues(alpha: 0.18),
                       foregroundColor: Colors.redAccent,
                       elevation: 0,
-                      side: BorderSide(color: Colors.redAccent.withOpacity(0.5)),
+                      side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.5)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -293,14 +340,14 @@ class AccountProfileDialog extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: AppTheme.colorCyan.withOpacity(0.06),
+                color: AppTheme.colorCyan.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.colorCyan.withOpacity(0.3)),
+                border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
                   Icon(Icons.info_outline_rounded, color: AppTheme.colorCyan, size: 18),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'GDRM IV — ASTEROID BELT (v4.0.0)',
                     style: TextStyle(
@@ -321,19 +368,19 @@ class AccountProfileDialog extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.08),
+                color: Colors.redAccent.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 20),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'DELETE GDRM ACCOUNT',
                           style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                         ),
@@ -392,15 +439,15 @@ class AccountProfileDialog extends StatelessWidget {
             }
 
             return AlertDialog(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: AppTheme.bgGlassPanel,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
-                side: const BorderSide(color: AppTheme.colorCyan, width: 1.5),
+                side: BorderSide(color: AppTheme.colorCyan, width: 1.5),
               ),
-              title: const Row(
+              title: Row(
                 children: [
                   Icon(Icons.mark_email_read_rounded, color: AppTheme.colorCyan, size: 22),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Text('Verify Email with OTP', style: TextStyle(color: AppTheme.fgLight, fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               ),
@@ -408,20 +455,20 @@ class AccountProfileDialog extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'We sent a 6-digit verification code via Gmail SMTP to:',
                     style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     email,
-                    style: const TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   if (isSending)
-                    const Center(
+                    Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         child: CircularProgressIndicator(color: AppTheme.colorCyan),
                       ),
                     )
@@ -440,17 +487,17 @@ class AccountProfileDialog extends StatelessWidget {
                       ),
                       decoration: InputDecoration(
                         hintText: '000000',
-                        hintStyle: TextStyle(color: AppTheme.fgMuted.withOpacity(0.4), letterSpacing: 8),
+                        hintStyle: TextStyle(color: AppTheme.fgMuted.withValues(alpha: 0.4), letterSpacing: 8),
                         counterText: '',
                         filled: true,
-                        fillColor: const Color(0xFF1E293B),
+                        fillColor: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppTheme.borderGlass),
+                          borderSide: BorderSide(color: AppTheme.borderGlass),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppTheme.colorCyan, width: 1.5),
+                          borderSide: BorderSide(color: AppTheme.colorCyan, width: 1.5),
                         ),
                       ),
                     ),
@@ -464,7 +511,7 @@ class AccountProfileDialog extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted)),
+                  child: Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted)),
                 ),
                 if (!isSending)
                   TextButton(
@@ -485,7 +532,7 @@ class AccountProfileDialog extends StatelessWidget {
                         });
                       }
                     },
-                    child: const Text('RESEND CODE', style: TextStyle(color: AppTheme.colorCyan, fontSize: 11)),
+                    child: Text('RESEND CODE', style: TextStyle(color: AppTheme.colorCyan, fontSize: 11)),
                   ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -505,9 +552,9 @@ class AccountProfileDialog extends StatelessWidget {
                             if (dialogCtx.mounted) Navigator.pop(dialogCtx);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  backgroundColor: Color(0xFF1E293B),
-                                  content: Text('✓ Email verified successfully via SMTP OTP!', style: TextStyle(color: Colors.greenAccent)),
+                                SnackBar(
+                                  backgroundColor: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
+                                  content: const Text('✓ Email verified successfully via SMTP OTP!', style: TextStyle(color: Colors.greenAccent)),
                                 ),
                               );
                             }
@@ -552,7 +599,7 @@ class AccountProfileDialog extends StatelessWidget {
             }
 
             return AlertDialog(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: AppTheme.bgGlassPanel,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
                 side: const BorderSide(color: Colors.redAccent, width: 1.5),
@@ -573,14 +620,14 @@ class AccountProfileDialog extends StatelessWidget {
                     style: TextStyle(color: Colors.redAccent, fontSize: 11, height: 1.4),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'To confirm deletion, enter the 6-digit OTP sent to:',
                     style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     email,
-                    style: const TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   if (isSending)
@@ -605,13 +652,13 @@ class AccountProfileDialog extends StatelessWidget {
                       ),
                       decoration: InputDecoration(
                         hintText: '000000',
-                        hintStyle: TextStyle(color: AppTheme.fgMuted.withOpacity(0.4), letterSpacing: 8),
+                        hintStyle: TextStyle(color: AppTheme.fgMuted.withValues(alpha: 0.4), letterSpacing: 8),
                         counterText: '',
                         filled: true,
-                        fillColor: const Color(0xFF1E293B),
+                        fillColor: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppTheme.borderGlass),
+                          borderSide: BorderSide(color: AppTheme.borderGlass),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -629,7 +676,7 @@ class AccountProfileDialog extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted)),
+                  child: Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted)),
                 ),
                 if (!isSending)
                   TextButton(
@@ -650,7 +697,7 @@ class AccountProfileDialog extends StatelessWidget {
                         });
                       }
                     },
-                    child: const Text('RESEND CODE', style: TextStyle(color: AppTheme.colorCyan, fontSize: 11)),
+                    child: Text('RESEND CODE', style: TextStyle(color: AppTheme.colorCyan, fontSize: 11)),
                   ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -671,9 +718,9 @@ class AccountProfileDialog extends StatelessWidget {
                             if (context.mounted) {
                               Navigator.pop(context); // close profile modal
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  backgroundColor: Color(0xFF1E293B),
-                                  content: Text('✓ Account permanently deleted.', style: TextStyle(color: Colors.redAccent)),
+                                SnackBar(
+                                  backgroundColor: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
+                                  content: const Text('✓ Account permanently deleted.', style: TextStyle(color: Colors.redAccent)),
                                 ),
                               );
                             }

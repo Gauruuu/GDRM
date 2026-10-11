@@ -295,12 +295,12 @@ class PrintingService {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgGlassPanel,
         content: Row(
           children: [
             CircularProgressIndicator(color: AppTheme.colorCyan),
-            SizedBox(width: 20),
+            const SizedBox(width: 20),
             Expanded(
               child: Text(
                 'Generating simulated watermarked paper output...',
@@ -333,10 +333,10 @@ class PrintingService {
                 backgroundColor: AppTheme.bgGlassSidebar,
                 elevation: 0,
                 leading: IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppTheme.fgLight),
+                  icon: Icon(Icons.close_rounded, color: AppTheme.fgLight),
                   onPressed: () => Navigator.pop(ctx),
                 ),
-                title: const Column(
+                title: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -385,7 +385,7 @@ class PrintingService {
           builder: (ctx) => AlertDialog(
             backgroundColor: AppTheme.bgGlassPanel,
             title: const Text('Simulation Error', style: TextStyle(color: Colors.redAccent)),
-            content: Text(e.toString(), style: const TextStyle(color: AppTheme.fgLight, fontSize: 12)),
+            content: Text(e.toString(), style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
             ],
@@ -419,12 +419,12 @@ class PrintingService {
           backgroundColor: AppTheme.bgGlassSidebar,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppTheme.colorCyan),
+            side: BorderSide(color: AppTheme.colorCyan),
           ),
-          title: const Row(
+          title: Row(
             children: [
               Icon(Icons.print_rounded, color: AppTheme.colorCyan),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 'Secure Physical Paper Print',
                 style: TextStyle(
@@ -439,12 +439,12 @@ class PrintingService {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Print to physical hardware paper with 100% true-to-fit scaling and indelible dynamic security watermark.',
                 style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'SELECT PHYSICAL PRINTER',
                 style: TextStyle(
                   color: AppTheme.colorCyan,
@@ -472,12 +472,12 @@ class PrintingService {
                           value: p,
                           child: Row(
                             children: [
-                              const Icon(Icons.print, size: 16, color: AppTheme.fgLight),
+                              Icon(Icons.print, size: 16, color: AppTheme.fgLight),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   p.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppTheme.fgLight,
                                     fontSize: 12,
                                     overflow: TextOverflow.ellipsis,
@@ -500,9 +500,9 @@ class PrintingService {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withOpacity(0.08),
+                    color: Colors.redAccent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
                   ),
                   child: const Row(
                     children: [
@@ -521,19 +521,19 @@ class PrintingService {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.colorAmber.withOpacity(0.08),
+                  color: AppTheme.colorAmber.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: AppTheme.colorAmber.withOpacity(0.3)),
+                  border: Border.all(color: AppTheme.colorAmber.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.verified_user_rounded,
+                    Icon(Icons.verified_user_rounded,
                         color: AppTheme.colorAmber, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Virtual PDF export & file saving are disabled.\nWatermarked to: $activeUsername',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.colorAmber,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -548,13 +548,13 @@ class PrintingService {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogCtx, 'CANCEL'),
-              child: const Text('CANCEL',
+              child: Text('CANCEL',
                   style: TextStyle(color: AppTheme.fgMuted, fontWeight: FontWeight.bold)),
             ),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.colorCyan,
-                side: const BorderSide(color: AppTheme.colorCyan),
+                side: BorderSide(color: AppTheme.colorCyan),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
               icon: const Icon(Icons.preview_rounded, size: 14),
@@ -596,12 +596,12 @@ class PrintingService {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const AlertDialog(
+        builder: (ctx) => AlertDialog(
           backgroundColor: AppTheme.bgGlassPanel,
           content: Row(
             children: [
               CircularProgressIndicator(color: AppTheme.colorCyan),
-              SizedBox(width: 20),
+              const SizedBox(width: 20),
               Expanded(
                 child: Text(
                   'Burning security watermarks & spooling to printer...',
@@ -661,7 +661,7 @@ class PrintingService {
                   const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 16),
                   const SizedBox(width: 8),
                   Text('Document spooled to ${selectedPrinter!.name} with security watermark.',
-                      style: const TextStyle(color: AppTheme.fgLight, fontSize: 12)),
+                      style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
                 ],
               ),
             ),
@@ -677,11 +677,11 @@ class PrintingService {
               title: const Text('Print Error',
                   style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
               content: Text('Failed to complete print operation:\n$e',
-                  style: const TextStyle(color: AppTheme.fgLight, fontSize: 12)),
+                  style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK', style: TextStyle(color: AppTheme.colorCyan)),
+                  child: Text('OK', style: TextStyle(color: AppTheme.colorCyan)),
                 ),
               ],
             ),

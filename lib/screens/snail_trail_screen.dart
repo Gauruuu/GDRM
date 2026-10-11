@@ -39,19 +39,19 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
         backgroundColor: AppTheme.bgGlassSidebar,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'SNAILTRAIL SECURITY AUDIT',
               style: TextStyle(color: AppTheme.fgLight, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1.2),
             ),
             Text(
               'Container Hash: ${widget.fileFingerprint}',
-              style: const TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontFamily: 'monospace'),
+              style: TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontFamily: 'monospace'),
             ),
           ],
         ),
@@ -91,10 +91,10 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: !_showDatabaseTrail ? AppTheme.colorCyan.withOpacity(0.18) : Colors.transparent,
+                        color: !_showDatabaseTrail ? AppTheme.colorCyan.withValues(alpha: 0.18) : Colors.transparent,
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color: !_showDatabaseTrail ? AppTheme.colorCyan.withOpacity(0.5) : Colors.transparent,
+                          color: !_showDatabaseTrail ? AppTheme.colorCyan.withValues(alpha: 0.5) : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -122,10 +122,10 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: _showDatabaseTrail ? AppTheme.colorCyan.withOpacity(0.18) : Colors.transparent,
+                        color: _showDatabaseTrail ? AppTheme.colorCyan.withValues(alpha: 0.18) : Colors.transparent,
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color: _showDatabaseTrail ? AppTheme.colorCyan.withOpacity(0.5) : Colors.transparent,
+                          color: _showDatabaseTrail ? AppTheme.colorCyan.withValues(alpha: 0.5) : Colors.transparent,
                         ),
                       ),
                       child: Row(
@@ -133,7 +133,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                         children: [
                           Icon(Icons.cloud_sync_rounded, size: 13, color: _showDatabaseTrail ? AppTheme.colorCyan : AppTheme.fgMuted),
                           const SizedBox(width: 6),
-                          const Text(
+                          Text(
                             'Live Cloud Audit Trail',
                             style: TextStyle(
                               color: AppTheme.colorCyan,
@@ -199,9 +199,9 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: accentColor.withOpacity(0.08),
+                      color: accentColor.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
-                      border: Border.all(color: accentColor.withOpacity(0.4), width: 1.5),
+                      border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1.5),
                     ),
                     child: Icon(iconData, color: accentColor, size: 14),
                   ),
@@ -224,7 +224,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                       color: AppTheme.bgGlassPanel,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: log.action.contains('ALERT') ? Colors.redAccent.withOpacity(0.5) : AppTheme.borderGlass,
+                        color: log.action.contains('ALERT') ? Colors.redAccent.withValues(alpha: 0.5) : AppTheme.borderGlass,
                       ),
                     ),
                     child: Column(
@@ -237,18 +237,18 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                               style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
                             ),
                             const Spacer(),
-                            const Icon(Icons.access_time_rounded, color: AppTheme.fgMuted, size: 10),
+                            Icon(Icons.access_time_rounded, color: AppTheme.fgMuted, size: 10),
                             const SizedBox(width: 4),
                             Text(
                               _formatTimestamp(log.timestamp),
-                              style: const TextStyle(color: AppTheme.fgMuted, fontSize: 10),
+                              style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
                         Text(
                           log.details,
-                          style: const TextStyle(color: AppTheme.fgLight, fontSize: 12, height: 1.4),
+                          style: TextStyle(color: AppTheme.fgLight, fontSize: 12, height: 1.4),
                         ),
                         const SizedBox(height: 6),
                         Container(
@@ -260,7 +260,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                           ),
                           child: Text(
                             'DEVICE KEY: ${log.deviceKey}',
-                            style: const TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontFamily: 'monospace'),
+                            style: TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontFamily: 'monospace'),
                           ),
                         ),
                       ],
@@ -280,7 +280,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
       stream: PiracyService.getDatabaseSnailTrailStream(widget.fileFingerprint),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.colorCyan));
+          return Center(child: CircularProgressIndicator(color: AppTheme.colorCyan));
         }
 
         if (snapshot.hasError) {
@@ -292,11 +292,11 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                 children: [
                   const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 36),
                   const SizedBox(height: 12),
-                  const Text('Error loading cloud audit events',
+                  Text('Error loading cloud audit events',
                       style: TextStyle(color: AppTheme.fgLight, fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 6),
                   Text('${snapshot.error}',
-                      style: const TextStyle(color: AppTheme.fgMuted, fontSize: 11),
+                      style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
                       textAlign: TextAlign.center),
                 ],
               ),
@@ -369,9 +369,9 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: accentColor.withOpacity(0.08),
+                          color: accentColor.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
-                          border: Border.all(color: accentColor.withOpacity(0.4), width: 1.5),
+                          border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1.5),
                         ),
                         child: Icon(iconData, color: accentColor, size: 14),
                       ),
@@ -395,7 +395,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
                             color: action.contains('ALERT') || action.contains('TRIGGERED')
-                                ? Colors.redAccent.withOpacity(0.5)
+                                ? Colors.redAccent.withValues(alpha: 0.5)
                                 : AppTheme.borderGlass,
                           ),
                         ),
@@ -414,18 +414,18 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                                   ),
                                 ),
                                 const Spacer(),
-                                const Icon(Icons.cloud_done_rounded, color: AppTheme.colorCyan, size: 10),
+                                Icon(Icons.cloud_done_rounded, color: AppTheme.colorCyan, size: 10),
                                 const SizedBox(width: 4),
                                 Text(
                                   timeStr,
-                                  style: const TextStyle(color: AppTheme.fgMuted, fontSize: 10),
+                                  style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
                             Text(
                               details,
-                              style: const TextStyle(color: AppTheme.fgLight, fontSize: 12, height: 1.4),
+                              style: TextStyle(color: AppTheme.fgLight, fontSize: 12, height: 1.4),
                             ),
                             const SizedBox(height: 8),
                             Wrap(
@@ -441,7 +441,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                                   ),
                                   child: Text(
                                     'DEVICE: ${deviceKey.length > 20 ? "${deviceKey.substring(0, 18)}..." : deviceKey}',
-                                    style: const TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontFamily: 'monospace'),
+                                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 9, fontFamily: 'monospace'),
                                   ),
                                 ),
                                 if (ip != 'Unknown' && ip.isNotEmpty)
@@ -454,7 +454,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                                     ),
                                     child: Text(
                                       'IP: $ip',
-                                      style: const TextStyle(color: AppTheme.colorCyan, fontSize: 9, fontFamily: 'monospace'),
+                                      style: TextStyle(color: AppTheme.colorCyan, fontSize: 9, fontFamily: 'monospace'),
                                     ),
                                   ),
                                 if (mac != 'Unknown' && mac.isNotEmpty)
@@ -467,7 +467,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                                     ),
                                     child: Text(
                                       'MAC: $mac',
-                                      style: const TextStyle(color: AppTheme.colorCyan, fontSize: 9, fontFamily: 'monospace'),
+                                      style: TextStyle(color: AppTheme.colorCyan, fontSize: 9, fontFamily: 'monospace'),
                                     ),
                                   ),
                                 if (platform.isNotEmpty)
@@ -480,7 +480,7 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
                                     ),
                                     child: Text(
                                       'OS: ${platform.toUpperCase()}',
-                                      style: const TextStyle(color: AppTheme.fgMuted, fontSize: 9),
+                                      style: TextStyle(color: AppTheme.fgMuted, fontSize: 9),
                                     ),
                                   ),
                               ],
@@ -504,9 +504,9 @@ class _SnailTrailScreenState extends State<SnailTrailScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.timeline_outlined, size: 48, color: AppTheme.borderGlass),
+          Icon(Icons.timeline_outlined, size: 48, color: AppTheme.borderGlass),
           const SizedBox(height: 12),
-          Text(title, style: const TextStyle(color: AppTheme.fgMuted, fontSize: 13)),
+          Text(title, style: TextStyle(color: AppTheme.fgMuted, fontSize: 13)),
         ],
       ),
     );

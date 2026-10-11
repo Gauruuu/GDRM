@@ -8,6 +8,8 @@ import 'account_profile_dialog.dart';
 import '../screens/snail_trail_screen.dart';
 import '../screens/global_auth_screen.dart';
 import '../screens/piracy_alerts_screen.dart';
+import '../screens/composer_audit_screen.dart';
+import '../screens/privacy_policy_screen.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({super.key});
@@ -18,15 +20,15 @@ class AppSidebar extends StatelessWidget {
 
     return Container(
       width: 270,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.bgGlassSidebar,
         border: Border(right: BorderSide(color: AppTheme.borderGlass)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 28, 20, 2),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 2),
             child: Text(
               'GDRM ECOSYSTEM',
               style: TextStyle(
@@ -36,8 +38,8 @@ class AppSidebar extends StatelessWidget {
                   letterSpacing: 1.2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: Text('Custom Digital Right Manager',
                 style: TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
           ),
@@ -58,10 +60,60 @@ class AppSidebar extends StatelessWidget {
             child: UserAuthBadge(state: state),
           ),
 
+          // ── Composer Packaged Files Tracker Quick Trigger ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ComposerAuditScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgGlassPanel,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: AppTheme.colorCyan.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.hub_outlined,
+                      color: AppTheme.colorCyan,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'TRACK PACKAGED FILES',
+                        style: TextStyle(
+                          color: AppTheme.colorCyan,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: AppTheme.colorCyan.withValues(alpha: 0.6),
+                      size: 10,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // ── Piracy & Security Alerts Quick Trigger ──
           if (state.isCloudAuthenticated)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
@@ -74,12 +126,12 @@ class AppSidebar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: state.unreadPiracyAlertsCount > 0
-                        ? Colors.redAccent.withOpacity(0.12)
+                        ? Colors.redAccent.withValues(alpha: 0.12)
                         : AppTheme.bgGlassPanel,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: state.unreadPiracyAlertsCount > 0
-                          ? Colors.redAccent.withOpacity(0.6)
+                          ? Colors.redAccent.withValues(alpha: 0.6)
                           : AppTheme.borderGlass,
                     ),
                   ),
@@ -130,8 +182,8 @@ class AppSidebar extends StatelessWidget {
               ),
             ),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
             child: Divider(color: AppTheme.borderGlass, height: 1),
           ),
           Expanded(
@@ -140,7 +192,7 @@ class AppSidebar extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('ACTIVE SYSTEM MANIFEST',
+                  Text('ACTIVE SYSTEM MANIFEST',
                       style: TextStyle(
                           color: AppTheme.fgMuted,
                           fontSize: 9,
@@ -161,10 +213,10 @@ class AppSidebar extends StatelessWidget {
                       title: 'Signature',
                       value: state.manifest.memeSignature,
                       valueColor: AppTheme.colorMagenta),
-                  const Divider(color: AppTheme.borderGlass),
+                  Divider(color: AppTheme.borderGlass),
 
                   if (state.manifest.trailLogs.isNotEmpty) ...[
-                    const Text(
+                    Text(
                       'FILE AUDIT MATRIX',
                       style: TextStyle(
                           color: AppTheme.fgMuted,
@@ -192,14 +244,14 @@ class AppSidebar extends StatelessWidget {
                           color: AppTheme.bgGlassPanel,
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: AppTheme.colorCyan.withOpacity(0.4)),
+                              color: AppTheme.colorCyan.withValues(alpha: 0.4)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.analytics_outlined,
                                 color: AppTheme.colorCyan, size: 14),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               'VIEW SNAILTRAIL LOGS',
                               style: TextStyle(
@@ -212,13 +264,13 @@ class AppSidebar extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Divider(color: AppTheme.borderGlass, height: 1),
                     ),
                   ],
 
-                  const Text('DRM BINDING',
+                  Text('DRM BINDING',
                       style: TextStyle(
                           color: AppTheme.fgMuted,
                           fontSize: 9,
@@ -229,7 +281,7 @@ class AppSidebar extends StatelessWidget {
                       title: 'Sender Token',
                       value: state.manifest.sender.isEmpty
                           ? '---'
-                          : state.manifest.sender.substring(0, 16) + '...',
+                          : '${state.manifest.sender.substring(0, 16)}...',
                       valueColor: AppTheme.colorCyan,
                       isMono: true),
                   ManifestIndicator(
@@ -262,8 +314,107 @@ class AppSidebar extends StatelessWidget {
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.all(16),
+
+          // ── Privacy Policy & Anti-Tampering Legal Directives ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PrivacyPolicyScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgGlassPanel,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.shield_rounded,
+                        color: AppTheme.colorCyan,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'PRIVACY & LEGAL TERMS',
+                          style: TextStyle(
+                            color: AppTheme.colorCyan,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: AppTheme.colorCyan.withValues(alpha: 0.6),
+                        size: 10,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Theme Switcher ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => state.toggleTheme(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgGlassPanel,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppTheme.borderGlass),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        state.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        color: state.isDarkMode ? AppTheme.colorCyan : AppTheme.colorAmber,
+                        size: 15,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          state.isDarkMode ? 'DARK THEME' : 'LIGHT THEME',
+                          style: TextStyle(
+                            color: AppTheme.fgLight,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        state.isDarkMode ? Icons.toggle_off_rounded : Icons.toggle_on_rounded,
+                        color: state.isDarkMode ? AppTheme.colorCyan : AppTheme.colorAmber,
+                        size: 24,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: Text('GDRM Document Protection Ecosystem',
                 style: TextStyle(color: AppTheme.footerGray, fontSize: 9)),
           ),
@@ -304,7 +455,7 @@ class UserAuthBadge extends StatelessWidget {
                         : (state.cloudUsername?.isNotEmpty == true
                             ? state.cloudUsername![0].toUpperCase()
                             : 'U'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.colorCyan,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
@@ -320,7 +471,7 @@ class UserAuthBadge extends StatelessWidget {
                         state.cloudDisplayName?.isNotEmpty == true
                             ? state.cloudDisplayName!
                             : state.cloudUsername!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.fgLight,
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
@@ -330,7 +481,7 @@ class UserAuthBadge extends StatelessWidget {
                       ),
                       Text(
                         '@${state.cloudUsername}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.colorCyan,
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
@@ -339,7 +490,7 @@ class UserAuthBadge extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Tooltip(
+                Tooltip(
                   message: 'Manage Account (Verify Email, Delete Account)',
                   child: Icon(Icons.manage_accounts_rounded, color: AppTheme.colorCyan, size: 18),
                 ),
@@ -361,13 +512,13 @@ class UserAuthBadge extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.bgGlassPanel,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppTheme.colorCyan.withOpacity(0.35)),
+            border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.35)),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.login_rounded, color: AppTheme.colorCyan, size: 14),
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
                 'SIGN IN / REGISTER',
                 style: TextStyle(
@@ -415,9 +566,9 @@ class _DrmStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withOpacity(0.35))),
+          border: Border.all(color: color.withValues(alpha: 0.35))),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

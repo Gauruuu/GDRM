@@ -8,21 +8,33 @@ import 'package:app_links/app_links.dart';
 ///   - Windows: command-line argument (double-click in Explorer)
 class FileIntentService {
   static final _controller = StreamController<String>.broadcast();
+  static String? _pendingInitialFile;
 
   /// Stream of absolute file paths for incoming .gdrm files
   static Stream<String> get onFileReceived => _controller.stream;
+
+  /// Retrieves and clears any initial file queued at startup
+  static String? consumePendingInitialFile() {
+    final file = _pendingInitialFile;
+    _pendingInitialFile = null;
+    return file;
+  }
 
   static AppLinks? _appLinks;
 
   static Future<void> init(List<String> args) async {
     // ── Windows: file path passed as CLI argument ──────────────────────────
     if (Platform.isWindows && args.isNotEmpty) {
-      final path = args.first;
-      if (path.toLowerCase().endsWith('.gdrm') && File(path).existsSync()) {
-        // Slight delay so the widget tree is ready
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _controller.add(path);
-        });
+      for (final arg in args) {
+        final clean = arg.replaceAll('"', '').trim();
+        if (clean.toLowerCase().endsWith('.gdrm') && File(clean).existsSync()) {
+          _pendingInitialFile = clean;
+          // In case a listener has already attached
+          Future.delayed(const Duration(milliseconds: 300), () {
+            _controller.add(clean);
+          });
+          break;
+        }
       }
     }
 
@@ -35,7 +47,8 @@ class FileIntentService {
       if (initialUri != null) {
         final path = _uriToPath(initialUri);
         if (path != null) {
-          Future.delayed(const Duration(milliseconds: 500), () {
+          _pendingInitialFile = path;
+          Future.delayed(const Duration(milliseconds: 300), () {
             _controller.add(path);
           });
         }

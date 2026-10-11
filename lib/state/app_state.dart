@@ -9,11 +9,28 @@ import '../models/gdrm_model.dart';
 import '../services/piracy_service.dart';
 import '../services/smtp_email_service.dart';
 
+import '../theme/app_theme.dart';
+
 enum AppView { reader, packer }
 
 class AppState extends ChangeNotifier {
   AppState() {
     _initAuthListener();
+  }
+
+  // ── Theme State ─────────────────────────────────────────────────────────────
+  bool isDarkMode = true;
+
+  void toggleTheme() {
+    isDarkMode = !isDarkMode;
+    AppTheme.isDark = isDarkMode;
+    notifyListeners();
+  }
+
+  void setThemeMode(bool dark) {
+    isDarkMode = dark;
+    AppTheme.isDark = dark;
+    notifyListeners();
   }
 
   // ── Navigation ──────────────────────────────────────────────────────────────
@@ -635,6 +652,20 @@ class AppState extends ChangeNotifier {
     zoomLevel = 1.0;
     isFileLoaded = true;
     readerError = null;
+    notifyListeners();
+  }
+
+  void clearLoadedFile() {
+    if (tempPdfPath != null) {
+      try {
+        File(tempPdfPath!).delete();
+      } catch (_) {}
+    }
+    tempPdfPath = null;
+    manifest = GdrmMetadata.empty;
+    isFileLoaded = false;
+    pageNum = 0;
+    zoomLevel = 1.0;
     notifyListeners();
   }
 

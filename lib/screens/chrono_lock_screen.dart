@@ -85,10 +85,10 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: color.withOpacity(0.08 * _glow.value),
+                  color: color.withValues(alpha: 0.08 * _glow.value),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.35 * _glow.value),
+                      color: color.withValues(alpha: 0.35 * _glow.value),
                       blurRadius: 40,
                       spreadRadius: 10,
                     ),
@@ -99,7 +99,7 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
                       ? Icons.lock_open_rounded
                       : Icons.lock_clock_rounded,
                   size: 64,
-                  color: color.withOpacity(0.6 + 0.4 * _glow.value),
+                  color: color.withValues(alpha: 0.6 + 0.4 * _glow.value),
                 ),
               ),
             ),
@@ -123,7 +123,7 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
                     ? 'The unlock time has passed. Close this screen and\nreopen the file to view it.'
                     : 'This document is time-locked by its sender and\ncannot be opened yet.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.fgMuted,
                   fontSize: 13,
                   height: 1.7,
@@ -145,13 +145,13 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.event_available_rounded,
+                  Icon(Icons.event_available_rounded,
                       color: AppTheme.colorAmber, size: 16),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Available at\n$_localUnlockLabel',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.fgLight,
                         fontSize: 12,
                         height: 1.4,
@@ -173,7 +173,7 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: AppTheme.borderGlass),
                 ),
-                child: const Text(
+                child: Text(
                   'CLOSE',
                   style: TextStyle(
                     color: AppTheme.fgMuted,
@@ -219,12 +219,12 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
           decoration: BoxDecoration(
             color: AppTheme.bgGlassPanel,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: AppTheme.colorAmber.withOpacity(0.4)),
+            border: Border.all(color: AppTheme.colorAmber.withValues(alpha: 0.4)),
           ),
           child: Text(
             _twoDigit(value),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.colorAmber,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -234,15 +234,15 @@ class _ChronoLockScreenState extends State<ChronoLockScreen>
         ),
         const SizedBox(height: 4),
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 color: AppTheme.fgMuted, fontSize: 9, letterSpacing: 0.5)),
       ],
     );
   }
 
   Widget _colon() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 6),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Text(':',
           style: TextStyle(
               color: AppTheme.fgMuted,

@@ -47,10 +47,10 @@ class _PiracyScreenState extends State<PiracyScreen>
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.red.withOpacity(0.08 * _glow.value),
+                  color: Colors.red.withValues(alpha: 0.08 * _glow.value),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.red.withOpacity(0.35 * _glow.value),
+                      color: Colors.red.withValues(alpha: 0.35 * _glow.value),
                       blurRadius: 40,
                       spreadRadius: 10,
                     ),
@@ -59,7 +59,7 @@ class _PiracyScreenState extends State<PiracyScreen>
                 child: Icon(
                   Icons.gpp_bad_rounded,
                   size: 64,
-                  color: Colors.red.withOpacity(0.6 + 0.4 * _glow.value),
+                  color: Colors.red.withValues(alpha: 0.6 + 0.4 * _glow.value),
                 ),
               ),
             ),
@@ -78,8 +78,8 @@ class _PiracyScreenState extends State<PiracyScreen>
             const SizedBox(height: 12),
 
             // ── Subtext ─────────────────────────────────────────────────────
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 'This file has already been activated on a different device.\n'
                 'Sharing or redistributing GDRM-protected content is a violation\n'
@@ -99,9 +99,9 @@ class _PiracyScreenState extends State<PiracyScreen>
               margin: const EdgeInsets.symmetric(horizontal: 32),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.06),
+                color: Colors.red.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.red.withOpacity(0.25)),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
               ),
               child: const Row(
                 children: [
@@ -134,7 +134,7 @@ class _PiracyScreenState extends State<PiracyScreen>
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: AppTheme.borderGlass),
                 ),
-                child: const Text(
+                child: Text(
                   'CLOSE FILE',
                   style: TextStyle(
                     color: AppTheme.fgMuted,

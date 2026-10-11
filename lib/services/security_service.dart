@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SecurityService {
   static const _channel = MethodChannel('com.gdrm.ecosystem/security');
-  static const _prefRegistered = 'gdrm_win_registered';
+  static const _prefRegisteredExe = 'gdrm_win_registered_exe';
 
   static Future<void> init() async {
     if (Platform.isWindows) {
@@ -21,26 +21,47 @@ class SecurityService {
   }
 
   static Future<void> _registerWindowsFileAssociation() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_prefRegistered) == true) return;
     try {
       final exePath = Platform.resolvedExecutable;
-      await _reg(r'HKCU\Software\Classes\.gdrm', '', 'GDRMEcosystemFile');
-      await _reg(r'HKCU\Software\Classes\.gdrm', 'Content Type', 'application/x-gdrm');
-      await _reg(r'HKCU\Software\Classes\GDRMEcosystemFile', '', 'GDRM Protected Document');
-      await _reg(r'HKCU\Software\Classes\GDRMEcosystemFile\DefaultIcon', '', '$exePath,0');
-      await _reg(r'HKCU\Software\Classes\GDRMEcosystemFile\shell\open\command', '', '"$exePath" "%1"');
-      await prefs.setBool(_prefRegistered, true);
-    } catch (_) {}
-  }
+      if (!exePath.toLowerCase().endsWith('.exe')) return;
 
-  static Future<void> _reg(String key, String valueName, String data) async {
-    final args = ['add', key, '/f'];
-    if (valueName.isEmpty) {
-      args.addAll(['/ve', '/d', data]);
-    } else {
-      args.addAll(['/v', valueName, '/d', data]);
-    }
-    await Process.run('reg', args);
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getString(_prefRegisteredExe) == exePath) return;
+
+      final escapedExe = exePath.replaceAll("'", "''");
+      final script = '''
+\$exe = '$escapedExe'
+\$p = 'HKCU:\\Software\\Classes'
+New-Item -Path "\$p\\.gdrm" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\.gdrm" -Name '(default)' -Value 'GDRMEcosystemFile'
+Set-ItemProperty -Path "\$p\\.gdrm" -Name 'Content Type' -Value 'application/x-gdrm'
+New-Item -Path "\$p\\.gdrm\\OpenWithProgids" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\.gdrm\\OpenWithProgids" -Name 'GDRMEcosystemFile' -Value ''
+New-Item -Path "\$p\\GDRMEcosystemFile\\shell\\open\\command" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\GDRMEcosystemFile\\shell\\open\\command" -Name '(default)' -Value ('"' + \$exe + '" "%1"')
+New-Item -Path "\$p\\GDRMEcosystemFile\\DefaultIcon" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\GDRMEcosystemFile\\DefaultIcon" -Name '(default)' -Value (\$exe + ',0')
+New-Item -Path "\$p\\Applications\\gdrm_ecosystem.exe\\shell\\open\\command" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\Applications\\gdrm_ecosystem.exe\\shell\\open\\command" -Name '(default)' -Value ('"' + \$exe + '" "%1"')
+New-Item -Path "\$p\\Applications\\GDRM III.exe\\shell\\open\\command" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\Applications\\GDRM III.exe\\shell\\open\\command" -Name '(default)' -Value ('"' + \$exe + '" "%1"')
+New-Item -Path "\$p\\Applications\\GDRM Ecosystem.exe\\shell\\open\\command" -Force | Out-Null
+Set-ItemProperty -Path "\$p\\Applications\\GDRM Ecosystem.exe\\shell\\open\\command" -Name '(default)' -Value ('"' + \$exe + '" "%1"')
+New-Item -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.gdrm\\OpenWithProgids' -Force | Out-Null
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.gdrm\\OpenWithProgids' -Name 'GDRMEcosystemFile' -Value ''
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class ShellNotifyAssoc {
+    [DllImport("shell32.dll")]
+    public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+"@
+[ShellNotifyAssoc]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+''';
+
+      await Process.run('powershell', ['-NoProfile', '-NonInteractive', '-Command', script]);
+      await prefs.setString(_prefRegisteredExe, exePath);
+    } catch (_) {}
   }
 }

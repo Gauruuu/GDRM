@@ -98,7 +98,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
       final identifier = _usernameCtrl.text.trim();
       if (identifier.isEmpty || password.isEmpty) {
         setState(() {
-          _statusMessage = 'Username/Email and Password are required.';
+          _statusMessage = 'Please enter your username/email and password.';
           _statusColor = Colors.redAccent;
         });
         return;
@@ -109,33 +109,19 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
         _statusMessage = null;
       });
 
-      try {
-        final state = context.read<AppState>();
-        final result = await state.loginToCloud(identifier, password);
+      final state = context.read<AppState>();
+      final result = await state.loginToCloud(identifier, password);
 
-        if (!mounted) return;
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-        if (result == 'SUCCESS') {
-          Navigator.of(context).pop(true);
-        } else {
-          setState(() {
-            _statusColor = Colors.redAccent;
-            _statusMessage = result;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _statusColor = Colors.redAccent;
-            _statusMessage = 'An error occurred: $e';
-          });
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      if (result == 'SUCCESS') {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() {
+          _statusMessage = result;
+          _statusColor = Colors.redAccent;
+        });
       }
     }
   }
@@ -151,7 +137,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
     bool isSending = true;
     String? errorText;
 
-    await showDialog(
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) {
@@ -172,37 +158,36 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
             }
 
             return AlertDialog(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: AppTheme.bgGlassPanel,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
-                side: const BorderSide(color: AppTheme.colorCyan, width: 1.5),
+                side: BorderSide(color: AppTheme.colorCyan, width: 1.5),
               ),
-              title: const Row(
+              title: Row(
                 children: [
                   Icon(Icons.mark_email_read_rounded, color: AppTheme.colorCyan, size: 22),
-                  SizedBox(width: 10),
-                  Text('Verify Email to Register',
-                      style: TextStyle(color: AppTheme.fgLight, fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 10),
+                  Text('Verify Registration Email', style: TextStyle(color: AppTheme.fgLight, fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'To complete your GDRM account creation, enter the 6-digit verification code sent to:',
-                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 12, height: 1.4),
+                  Text(
+                    'We sent a 6-digit confirmation code via Gmail SMTP to:',
+                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
                     email,
-                    style: const TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   if (isSending)
-                    const Center(
+                    Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         child: CircularProgressIndicator(color: AppTheme.colorCyan),
                       ),
                     )
@@ -224,14 +209,14 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                         hintStyle: TextStyle(color: AppTheme.fgMuted.withValues(alpha: 0.4), letterSpacing: 8),
                         counterText: '',
                         filled: true,
-                        fillColor: const Color(0xFF1E293B),
+                        fillColor: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppTheme.borderGlass),
+                          borderSide: BorderSide(color: AppTheme.borderGlass),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppTheme.colorCyan, width: 1.5),
+                          borderSide: BorderSide(color: AppTheme.colorCyan, width: 1.5),
                         ),
                       ),
                     ),
@@ -245,7 +230,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted)),
+                  child: Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted)),
                 ),
                 if (!isSending)
                   TextButton(
@@ -266,7 +251,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                         });
                       }
                     },
-                    child: const Text('RESEND CODE', style: TextStyle(color: AppTheme.colorCyan, fontSize: 11)),
+                    child: Text('RESEND CODE', style: TextStyle(color: AppTheme.colorCyan, fontSize: 11)),
                   ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -307,7 +292,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                                       const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 16),
                                       const SizedBox(width: 8),
                                       Text('Welcome, $name! Account @$username verified & created.',
-                                          style: const TextStyle(color: AppTheme.fgLight, fontSize: 12)),
+                                          style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
                                     ],
                                   ),
                                 ),
@@ -345,12 +330,12 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
         backgroundColor: AppTheme.bgGlassSidebar,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppTheme.colorCyan),
+          side: BorderSide(color: AppTheme.colorCyan),
         ),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.lock_reset_rounded, color: AppTheme.colorCyan),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text('Reset Account Password', style: TextStyle(color: AppTheme.fgLight, fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
@@ -358,14 +343,14 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Enter your registered Username handle or Email address. We will dispatch a password recovery link to your inbox free of charge.',
               style: TextStyle(color: AppTheme.fgMuted, fontSize: 11, height: 1.4),
             ),
             const SizedBox(height: 14),
             TextField(
               controller: resetCtrl,
-              style: const TextStyle(color: AppTheme.fgLight, fontSize: 13),
+              style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
               decoration: const InputDecoration(
                 hintText: 'e.g. gaurav or gaurav@example.com',
                 labelText: 'Username or Email',
@@ -374,7 +359,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.colorCyan, foregroundColor: Colors.black),
             onPressed: () => Navigator.pop(ctx, resetCtrl.text.trim()),
@@ -418,7 +403,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -442,9 +427,9 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: AppTheme.colorCyan.withOpacity(0.1),
+                      color: AppTheme.colorCyan.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.colorCyan.withOpacity(0.4)),
+                      border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
                     ),
                     child: Icon(
                       _isRegisterMode ? Icons.person_add_alt_1_rounded : Icons.shield_rounded,
@@ -457,7 +442,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                 Text(
                   _isRegisterMode ? 'CREATE GDRM IDENTITY' : 'GDRM SYSTEM LOGIN',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.fgLight,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -470,7 +455,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                       ? 'Register your custom preferred username handle for secure file locking'
                       : 'Authenticate to access username-locked files and cryptographic services',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.fgMuted, fontSize: 11, height: 1.4),
+                  style: TextStyle(color: AppTheme.fgMuted, fontSize: 11, height: 1.4),
                 ),
                 const SizedBox(height: 16),
 
@@ -493,9 +478,9 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: !_isRegisterMode ? AppTheme.colorCyan.withOpacity(0.18) : Colors.transparent,
+                              color: !_isRegisterMode ? AppTheme.colorCyan.withValues(alpha: 0.18) : Colors.transparent,
                               borderRadius: BorderRadius.circular(4),
-                              border: !_isRegisterMode ? Border.all(color: AppTheme.colorCyan.withOpacity(0.5)) : null,
+                              border: !_isRegisterMode ? Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.5)) : null,
                             ),
                             child: Text(
                               'SIGN IN',
@@ -520,9 +505,9 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: _isRegisterMode ? AppTheme.colorCyan.withOpacity(0.18) : Colors.transparent,
+                              color: _isRegisterMode ? AppTheme.colorCyan.withValues(alpha: 0.18) : Colors.transparent,
                               borderRadius: BorderRadius.circular(4),
-                              border: _isRegisterMode ? Border.all(color: AppTheme.colorCyan.withOpacity(0.5)) : null,
+                              border: _isRegisterMode ? Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.5)) : null,
                             ),
                             child: Text(
                               'REGISTER',
@@ -577,7 +562,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _isLoading ? null : _handleForgotPassword,
-                      child: const Text(
+                      child: Text(
                         'Forgot Password?',
                         style: TextStyle(
                           color: AppTheme.colorCyan,
@@ -595,9 +580,9 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _statusColor.withOpacity(0.1),
+                      color: _statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: _statusColor.withOpacity(0.4)),
+                      border: Border.all(color: _statusColor.withValues(alpha: 0.4)),
                     ),
                     child: Text(
                       _statusMessage!,
@@ -627,7 +612,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                       _isRegisterMode
                           ? 'Already registered? Sign In instead'
                           : "Don't have an identity handle? Register Account",
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.colorCyan,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

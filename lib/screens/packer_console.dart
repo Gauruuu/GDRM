@@ -161,7 +161,7 @@ class _PackerConsoleState extends State<PackerConsole> {
       lastDate: DateTime(now.year + 5),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: ColorScheme.dark(
             primary: AppTheme.colorCyan,
             surface: AppTheme.bgGlassSidebar,
           ),
@@ -178,7 +178,7 @@ class _PackerConsoleState extends State<PackerConsole> {
           : TimeOfDay.fromDateTime(now),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: ColorScheme.dark(
             primary: AppTheme.colorCyan,
             surface: AppTheme.bgGlassSidebar,
           ),
@@ -236,12 +236,12 @@ class _PackerConsoleState extends State<PackerConsole> {
             context: context,
             builder: (ctx) => AlertDialog(
               backgroundColor: AppTheme.bgGlassPanel,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: AppTheme.colorAmber)),
-              title: const Text('Recipient Not Found', style: TextStyle(color: AppTheme.colorAmber, fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppTheme.colorAmber)),
+              title: Text('Recipient Not Found', style: TextStyle(color: AppTheme.colorAmber, fontWeight: FontWeight.bold)),
               content: Text('The username "@$targetUser" is not currently registered on Firebase.\n\nThe receiver will have to create an account with username "@$targetUser" to open and decrypt the file.\n\nDo you want to proceed?'),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted))),
-                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('PROCEED ANYWAY', style: TextStyle(color: AppTheme.colorCyan, fontWeight: FontWeight.bold))),
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted))),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('PROCEED ANYWAY', style: TextStyle(color: AppTheme.colorCyan, fontWeight: FontWeight.bold))),
               ],
             ),
           );
@@ -370,10 +370,10 @@ class _PackerConsoleState extends State<PackerConsole> {
               decoration: BoxDecoration(
                 color: AppTheme.bgGlassSidebar,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.colorCyan.withOpacity(0.4), width: 1.5),
+                border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.4), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -389,9 +389,9 @@ class _PackerConsoleState extends State<PackerConsole> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.greenAccent.withOpacity(0.15),
+                            color: Colors.greenAccent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.greenAccent.withOpacity(0.4)),
+                            border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
                           ),
                           child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 22),
                         ),
@@ -400,7 +400,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'FILE CONVERTED & ENCRYPTED',
                                 style: TextStyle(
                                   color: AppTheme.fgLight,
@@ -411,7 +411,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                               ),
                               Text(
                                 '$baseFileName.gdrm',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.colorCyan,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -423,7 +423,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: AppTheme.fgMuted, size: 20),
+                          icon: Icon(Icons.close_rounded, color: AppTheme.fgMuted, size: 20),
                           onPressed: () => Navigator.pop(modalCtx),
                         ),
                       ],
@@ -449,16 +449,16 @@ class _PackerConsoleState extends State<PackerConsole> {
                             _summaryRow('FileRip Protection', '${_maxAttemptsCtrl.text} Max Attempts', Colors.redAccent),
                           if (_riggedTimeEnabled || _riggedOpenEnabled)
                             _summaryRow('Self-Destruct Trigger', 'Armed', Colors.orangeAccent),
-                          const Divider(color: AppTheme.borderGlass, height: 16),
+                          Divider(color: AppTheme.borderGlass, height: 16),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.folder_outlined, color: AppTheme.fgMuted, size: 14),
+                              Icon(Icons.folder_outlined, color: AppTheme.fgMuted, size: 14),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   currentSavedPath,
-                                  style: const TextStyle(color: AppTheme.fgMuted, fontSize: 10, fontFamily: 'monospace'),
+                                  style: TextStyle(color: AppTheme.fgMuted, fontSize: 10, fontFamily: 'monospace'),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -467,15 +467,15 @@ class _PackerConsoleState extends State<PackerConsole> {
                                 onTap: () {
                                   Clipboard.setData(ClipboardData(text: currentSavedPath));
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       backgroundColor: AppTheme.bgGlassPanel,
                                       content: Text('File path copied to clipboard', style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
-                                      duration: Duration(seconds: 2),
+                                      duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 },
-                                child: const Padding(
-                                  padding: EdgeInsets.only(left: 6),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 6),
                                   child: Icon(Icons.copy_rounded, color: AppTheme.colorCyan, size: 14),
                                 ),
                               ),
@@ -492,10 +492,10 @@ class _PackerConsoleState extends State<PackerConsole> {
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.colorCyan.withOpacity(0.18),
+                              backgroundColor: AppTheme.colorCyan.withValues(alpha: 0.18),
                               foregroundColor: AppTheme.colorCyan,
                               elevation: 0,
-                              side: const BorderSide(color: AppTheme.colorCyan, width: 1.2),
+                              side: BorderSide(color: AppTheme.colorCyan, width: 1.2),
                               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
@@ -535,7 +535,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                                             Expanded(
                                               child: Text(
                                                 'Saved to: ${p.basename(selectedPath)}',
-                                                style: const TextStyle(color: AppTheme.fgLight, fontSize: 12),
+                                                style: TextStyle(color: AppTheme.fgLight, fontSize: 12),
                                               ),
                                             ),
                                           ],
@@ -548,7 +548,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor: Colors.redAccent.withOpacity(0.8),
+                                      backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
                                       content: Text('Save error: $e', style: const TextStyle(color: Colors.white, fontSize: 12)),
                                     ),
                                   );
@@ -562,10 +562,10 @@ class _PackerConsoleState extends State<PackerConsole> {
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.colorMagenta.withOpacity(0.18),
+                              backgroundColor: AppTheme.colorMagenta.withValues(alpha: 0.18),
                               foregroundColor: AppTheme.colorMagenta,
                               elevation: 0,
-                              side: const BorderSide(color: AppTheme.colorMagenta, width: 1.2),
+                              side: BorderSide(color: AppTheme.colorMagenta, width: 1.2),
                               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
@@ -594,7 +594,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor: Colors.redAccent.withOpacity(0.8),
+                                      backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
                                       content: Text('Share error: $e', style: const TextStyle(color: Colors.white, fontSize: 12)),
                                     ),
                                   );
@@ -612,7 +612,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.greenAccent,
-                          side: BorderSide(color: Colors.greenAccent.withOpacity(0.5)),
+                          side: BorderSide(color: Colors.greenAccent.withValues(alpha: 0.5)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
@@ -648,7 +648,7 @@ class _PackerConsoleState extends State<PackerConsole> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
+          Text(label, style: TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
           Text(
             value,
             style: TextStyle(
@@ -670,7 +670,7 @@ class _PackerConsoleState extends State<PackerConsole> {
         color: AppTheme.bgGlassPanel,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: (_cloudLockEnabled || _membersOnly) ? AppTheme.colorCyan.withOpacity(0.6) : AppTheme.borderGlass,
+          color: (_cloudLockEnabled || _membersOnly) ? AppTheme.colorCyan.withValues(alpha: 0.6) : AppTheme.borderGlass,
           width: (_cloudLockEnabled || _membersOnly) ? 1.5 : 1.0,
         ),
       ),
@@ -686,7 +686,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                 color: _cloudLockEnabled ? AppTheme.colorCyan : AppTheme.fgMuted,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'SPECIFIC RECIPIENT USERNAME LOCK',
                   style: TextStyle(
@@ -708,7 +708,7 @@ class _PackerConsoleState extends State<PackerConsole> {
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Strict 1-to-1 lock: Only the user with this registered username handle can decrypt and view this document.',
             style: TextStyle(color: AppTheme.fgMuted, fontSize: 10.5),
           ),
@@ -731,13 +731,13 @@ class _PackerConsoleState extends State<PackerConsole> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.bgGlassSidebar,
                       foregroundColor: AppTheme.colorCyan,
-                      side: const BorderSide(color: AppTheme.colorCyan),
+                      side: BorderSide(color: AppTheme.colorCyan),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                     onPressed: _isCheckingUser ? null : _verifyTargetUser,
                     child: _isCheckingUser
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.colorCyan),
@@ -760,8 +760,8 @@ class _PackerConsoleState extends State<PackerConsole> {
             ],
           ],
 
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Divider(color: AppTheme.borderGlass),
           ),
 
@@ -774,7 +774,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                 color: _membersOnly ? Colors.greenAccent : AppTheme.fgMuted,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'ANY GDRM MEMBER (ACCOUNT REQUIRED)',
                   style: TextStyle(
@@ -814,7 +814,7 @@ class _PackerConsoleState extends State<PackerConsole> {
       decoration: BoxDecoration(
         color: AppTheme.bgGlassPanel,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: (_riggedTimeEnabled || _riggedOpenEnabled) ? AppTheme.colorMagenta.withOpacity(0.5) : AppTheme.borderGlass),
+        border: Border.all(color: (_riggedTimeEnabled || _riggedOpenEnabled) ? AppTheme.colorMagenta.withValues(alpha: 0.5) : AppTheme.borderGlass),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -823,7 +823,7 @@ class _PackerConsoleState extends State<PackerConsole> {
             children: [
               Icon(Icons.gavel_rounded, size: 16, color: (_riggedTimeEnabled || _riggedOpenEnabled) ? AppTheme.colorMagenta : AppTheme.fgMuted),
               const SizedBox(width: 8),
-              const Expanded(child: Text('RIGGEDFILE COUNTER & TIMERS', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
+              Expanded(child: Text('RIGGEDFILE COUNTER & TIMERS', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
             ],
           ),
           const SizedBox(height: 12),
@@ -831,7 +831,7 @@ class _PackerConsoleState extends State<PackerConsole> {
             children: [
               Switch(value: _riggedTimeEnabled, activeColor: AppTheme.colorMagenta, onChanged: (v) => setState(() => _riggedTimeEnabled = v)),
               const SizedBox(width: 8),
-              const Expanded(child: Text('Enable Lifespan Time-Bomb (Melt)', style: TextStyle(color: AppTheme.fgLight, fontSize: 12))),
+              Expanded(child: Text('Enable Lifespan Time-Bomb (Melt)', style: TextStyle(color: AppTheme.fgLight, fontSize: 12))),
             ],
           ),
           if (_riggedTimeEnabled) ...[
@@ -843,12 +843,12 @@ class _PackerConsoleState extends State<PackerConsole> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 14),
-                    const Text('TIME UNIT', style: TextStyle(color: AppTheme.fgMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text('TIME UNIT', style: TextStyle(color: AppTheme.fgMuted, fontSize: 10, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     DropdownButton<String>(
                       value: _durationUnit,
                       dropdownColor: AppTheme.bgGlassSidebar,
-                      style: const TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
                       items: ['MINUTES', 'HOURS', 'DAYS'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
                       onChanged: (v) => setState(() => _durationUnit = v ?? 'MINUTES'),
                     ),
@@ -857,12 +857,12 @@ class _PackerConsoleState extends State<PackerConsole> {
               ],
             ),
           ],
-          const Padding(padding: EdgeInsets.symmetric(vertical: 4), child: Divider(color: AppTheme.borderGlass)),
+          Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Divider(color: AppTheme.borderGlass)),
           Row(
             children: [
               Switch(value: _riggedOpenEnabled, activeColor: AppTheme.colorMagenta, onChanged: (v) => setState(() => _riggedOpenEnabled = v)),
               const SizedBox(width: 8),
-              const Expanded(child: Text('Enable Max File Opening Ceiling Limit', style: TextStyle(color: AppTheme.fgLight, fontSize: 12))),
+              Expanded(child: Text('Enable Max File Opening Ceiling Limit', style: TextStyle(color: AppTheme.fgLight, fontSize: 12))),
             ],
           ),
           if (_riggedOpenEnabled) ...[
@@ -879,7 +879,7 @@ class _PackerConsoleState extends State<PackerConsole> {
       decoration: BoxDecoration(
         color: AppTheme.bgGlassPanel,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _fileRipEnabled ? AppTheme.colorMagenta.withOpacity(0.5) : AppTheme.borderGlass),
+        border: Border.all(color: _fileRipEnabled ? AppTheme.colorMagenta.withValues(alpha: 0.5) : AppTheme.borderGlass),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,7 +888,7 @@ class _PackerConsoleState extends State<PackerConsole> {
             children: [
               Icon(Icons.gpp_maybe_rounded, size: 16, color: _fileRipEnabled ? AppTheme.colorMagenta : AppTheme.fgMuted),
               const SizedBox(width: 8),
-              const Expanded(child: Text('FILERIP PASSWORD LAYER', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
+              Expanded(child: Text('FILERIP PASSWORD LAYER', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
               Switch(value: _fileRipEnabled, activeColor: AppTheme.colorMagenta, onChanged: (v) => setState(() => _fileRipEnabled = v)),
             ],
           ),
@@ -907,7 +907,7 @@ class _PackerConsoleState extends State<PackerConsole> {
       decoration: BoxDecoration(
         color: AppTheme.bgGlassPanel,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _chronoLockEnabled ? AppTheme.colorAmber.withOpacity(0.5) : AppTheme.borderGlass),
+        border: Border.all(color: _chronoLockEnabled ? AppTheme.colorAmber.withValues(alpha: 0.5) : AppTheme.borderGlass),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,7 +916,7 @@ class _PackerConsoleState extends State<PackerConsole> {
             children: [
               Icon(Icons.lock_clock_rounded, size: 16, color: _chronoLockEnabled ? AppTheme.colorAmber : AppTheme.fgMuted),
               const SizedBox(width: 8),
-              const Expanded(child: Text('CHRONOLOCK', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
+              Expanded(child: Text('CHRONOLOCK', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
               Switch(value: _chronoLockEnabled, activeColor: AppTheme.colorAmber, onChanged: (v) => setState(() => _chronoLockEnabled = v)),
             ],
           ),
@@ -930,7 +930,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                 decoration: BoxDecoration(color: AppTheme.bgMain, borderRadius: BorderRadius.circular(4), border: Border.all(color: AppTheme.borderGlass)),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded, size: 13, color: AppTheme.colorAmber),
+                    Icon(Icons.calendar_today_rounded, size: 13, color: AppTheme.colorAmber),
                     const SizedBox(width: 8),
                     Text(_openAt == null ? 'Set unlock date & time' : _formatOpenAt(_openAt!), style: TextStyle(color: _openAt == null ? AppTheme.fgMuted : AppTheme.colorAmber, fontSize: 12, fontWeight: FontWeight.bold)),
                   ],
@@ -950,7 +950,7 @@ class _PackerConsoleState extends State<PackerConsole> {
         color: AppTheme.bgGlassPanel,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: _allowPrint ? AppTheme.colorCyan.withOpacity(0.5) : Colors.redAccent.withOpacity(0.5),
+          color: _allowPrint ? AppTheme.colorCyan.withValues(alpha: 0.5) : Colors.redAccent.withValues(alpha: 0.5),
         ),
       ),
       child: Column(
@@ -964,7 +964,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                 color: _allowPrint ? AppTheme.colorCyan : Colors.redAccent,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'PHYSICAL PRINTING PERMISSION',
                   style: TextStyle(
@@ -979,7 +979,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                 value: _allowPrint,
                 activeColor: AppTheme.colorCyan,
                 inactiveThumbColor: Colors.redAccent,
-                inactiveTrackColor: Colors.redAccent.withOpacity(0.3),
+                inactiveTrackColor: Colors.redAccent.withValues(alpha: 0.3),
                 onChanged: (v) => setState(() => _allowPrint = v),
               ),
             ],
@@ -990,7 +990,7 @@ class _PackerConsoleState extends State<PackerConsole> {
                 ? 'Authorized recipients can print watermarked examination / security copies on physical hardware printers.'
                 : 'Physical printing is strictly prohibited. The Reader console will deny all print spooling requests.',
             style: TextStyle(
-              color: _allowPrint ? AppTheme.fgMuted : Colors.redAccent.withOpacity(0.85),
+              color: _allowPrint ? AppTheme.fgMuted : Colors.redAccent.withValues(alpha: 0.85),
               fontSize: 11,
             ),
           ),
@@ -1007,8 +1007,8 @@ class _PackerConsoleState extends State<PackerConsole> {
         backgroundColor: AppTheme.bgGlassPanel,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isError ? Colors.redAccent : AppTheme.colorCyan)),
         title: Text(title, style: TextStyle(color: isError ? Colors.redAccent : AppTheme.colorCyan, fontWeight: FontWeight.bold)),
-        content: Text(msg, style: const TextStyle(color: AppTheme.fgLight)),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppTheme.colorCyan)))],
+        content: Text(msg, style: TextStyle(color: AppTheme.fgLight)),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('OK', style: TextStyle(color: AppTheme.colorCyan)))],
       ),
     );
   }
@@ -1032,10 +1032,10 @@ class _PackerConsoleState extends State<PackerConsole> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('GDRM COMPREHENSIVE PACKER', style: TextStyle(color: AppTheme.fgLight, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+              Text('GDRM COMPREHENSIVE PACKER', style: TextStyle(color: AppTheme.fgLight, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
               const SizedBox(height: 4),
-              const Text('Convert PDF to encrypted .gdrm container with Receiver Username Lock', style: TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
-              const Divider(color: AppTheme.borderGlass, height: 24),
+              Text('Convert PDF to encrypted .gdrm container with Receiver Username Lock', style: TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
+              Divider(color: AppTheme.borderGlass, height: 24),
               
               // ── Recipient Lock Section ──
               _recipientLockSection(),

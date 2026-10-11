@@ -5,13 +5,13 @@ import '../theme/app_theme.dart';
 class GlassPanel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final Color color;
+  final Color? color;
 
   const GlassPanel({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.color = AppTheme.bgGlassPanel,
+    this.color,
   });
 
   @override
@@ -19,7 +19,7 @@ class GlassPanel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: color,
+        color: color ?? AppTheme.bgGlassPanel,
         border: Border.all(color: AppTheme.borderGlass),
         borderRadius: BorderRadius.circular(6),
       ),
@@ -51,7 +51,7 @@ class NavButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(4),
-          hoverColor: AppTheme.bgGlassPanel.withOpacity(0.6),
+          hoverColor: AppTheme.bgGlassPanel.withValues(alpha: 0.6),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -81,14 +81,14 @@ class NavButton extends StatelessWidget {
 class ManifestIndicator extends StatelessWidget {
   final String title;
   final String value;
-  final Color valueColor;
+  final Color? valueColor;
   final bool isMono;
 
   const ManifestIndicator({
     super.key,
     required this.title,
     required this.value,
-    this.valueColor = AppTheme.fgLight,
+    this.valueColor,
     this.isMono = false,
   });
 
@@ -101,7 +101,7 @@ class ManifestIndicator extends StatelessWidget {
         children: [
           Text(
             '$title:',
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.fgMuted,
               fontSize: 10,
             ),
@@ -110,7 +110,7 @@ class ManifestIndicator extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              color: valueColor,
+              color: valueColor ?? AppTheme.fgLight,
               fontSize: 11,
               fontWeight: isMono ? FontWeight.normal : FontWeight.bold,
               fontFamily: isMono ? 'monospace' : null,
@@ -128,19 +128,20 @@ class ManifestIndicator extends StatelessWidget {
 class ToolbarButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-  final Color fgColor;
+  final Color? fgColor;
   final IconData? icon;
 
   const ToolbarButton({
     super.key,
     required this.label,
     required this.onTap,
-    this.fgColor = AppTheme.fgLight,
+    this.fgColor,
     this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveFg = fgColor ?? AppTheme.fgLight;
     return Material(
       color: AppTheme.bgGlassPanel,
       borderRadius: BorderRadius.circular(4),
@@ -158,13 +159,13 @@ class ToolbarButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, color: fgColor, size: 14),
+                Icon(icon, color: effectiveFg, size: 14),
                 const SizedBox(width: 6),
               ],
               Text(
                 label,
                 style: TextStyle(
-                  color: fgColor,
+                  color: effectiveFg,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                 ),
@@ -198,7 +199,7 @@ class LabeledTextField extends StatelessWidget {
         const SizedBox(height: 14),
         Text(
           label.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             color: AppTheme.fgMuted,
             fontSize: 10,
             fontWeight: FontWeight.bold,
@@ -208,7 +209,7 @@ class LabeledTextField extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          style: const TextStyle(color: AppTheme.fgLight, fontSize: 13),
+          style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
           decoration: InputDecoration(hintText: hint),
           cursorColor: AppTheme.colorCyan,
         ),
@@ -243,11 +244,11 @@ class CyanActionButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppTheme.bgGlassPanel,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: AppTheme.colorCyan.withOpacity(0.7)),
+            border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.7)),
           ),
           child: Center(
             child: isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
@@ -257,7 +258,7 @@ class CyanActionButton extends StatelessWidget {
                   )
                 : Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.colorCyan,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,

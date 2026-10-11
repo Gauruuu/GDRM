@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -34,11 +32,18 @@ class GDRMApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => AppState(),
-      child: MaterialApp(
-        title: 'GDRM Ecosystem',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: const HomeScreen(),
+      child: Consumer<AppState>(
+        builder: (context, state, _) {
+          AppTheme.isDark = state.isDarkMode;
+          return MaterialApp(
+            title: 'GDRM Ecosystem',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: state.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const HomeScreen(),
+          );
+        },
       ),
     );
   }

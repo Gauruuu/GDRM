@@ -17,16 +17,16 @@ class PiracyAlertsScreen extends StatelessWidget {
         backgroundColor: AppTheme.bgGlassSidebar,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 18),
-                SizedBox(width: 8),
+                const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 18),
+                const SizedBox(width: 8),
                 Text(
                   'SECURITY & PIRACY ALERTS',
                   style: TextStyle(
@@ -40,23 +40,23 @@ class PiracyAlertsScreen extends StatelessWidget {
             ),
             Text(
               'Monitoring author: @${senderUsername.replaceAll('@', '')}',
-              style: const TextStyle(color: AppTheme.fgMuted, fontSize: 10),
+              style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
             ),
           ],
         ),
         actions: [
           IconButton(
             tooltip: 'Mark All as Read',
-            icon: const Icon(Icons.done_all_rounded, color: AppTheme.colorCyan, size: 20),
+            icon: Icon(Icons.done_all_rounded, color: AppTheme.colorCyan, size: 20),
             onPressed: () async {
               await PiracyService.markAllAlertsAsRead(senderUsername);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
+                  SnackBar(
                     backgroundColor: AppTheme.bgGlassPanel,
                     content: Text('All security alerts marked as read.',
                         style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
-                    duration: Duration(seconds: 2),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               }
@@ -68,7 +68,7 @@ class PiracyAlertsScreen extends StatelessWidget {
         stream: PiracyService.getPiracyAlertsStream(senderUsername),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.colorCyan));
+            return Center(child: CircularProgressIndicator(color: AppTheme.colorCyan));
           }
 
           if (snapshot.hasError) {
@@ -80,11 +80,11 @@ class PiracyAlertsScreen extends StatelessWidget {
                   children: [
                     const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 42),
                     const SizedBox(height: 12),
-                    const Text('Error loading piracy alerts',
+                    Text('Error loading piracy alerts',
                         style: TextStyle(color: AppTheme.fgLight, fontWeight: FontWeight.bold, fontSize: 14)),
                     const SizedBox(height: 6),
                     Text('${snapshot.error}',
-                        style: const TextStyle(color: AppTheme.fgMuted, fontSize: 11),
+                        style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
                         textAlign: TextAlign.center),
                   ],
                 ),
@@ -102,19 +102,19 @@ class PiracyAlertsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.greenAccent.withOpacity(0.08),
+                      color: Colors.greenAccent.withValues(alpha: 0.08),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+                      border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
                     ),
                     child: const Icon(Icons.shield_outlined, size: 48, color: Colors.greenAccent),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'No Piracy Attempts Detected',
                     style: TextStyle(color: AppTheme.fgLight, fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
+                  Text(
                     'All your authored files are secure and operating within licensed bounds.',
                     style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
                     textAlign: TextAlign.center,
@@ -137,14 +137,14 @@ class PiracyAlertsScreen extends StatelessWidget {
                   color: AppTheme.bgGlassPanel,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: alert.isRead ? AppTheme.borderGlass : Colors.redAccent.withOpacity(0.6),
+                    color: alert.isRead ? AppTheme.borderGlass : Colors.redAccent.withValues(alpha: 0.6),
                     width: alert.isRead ? 1.0 : 1.5,
                   ),
                   boxShadow: alert.isRead
                       ? []
                       : [
                           BoxShadow(
-                            color: Colors.redAccent.withOpacity(0.12),
+                            color: Colors.redAccent.withValues(alpha: 0.12),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
@@ -160,9 +160,9 @@ class PiracyAlertsScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.redAccent.withOpacity(0.15),
+                              color: Colors.redAccent.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
                             ),
                             child: const Row(
                               children: [
@@ -183,21 +183,21 @@ class PiracyAlertsScreen extends StatelessWidget {
                           const Spacer(),
                           Text(
                             formattedTime,
-                            style: const TextStyle(color: AppTheme.fgMuted, fontSize: 10),
+                            style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Text(
                         alert.details,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.fgLight,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Divider(color: AppTheme.borderGlass, height: 1),
+                      Divider(color: AppTheme.borderGlass, height: 1),
                       const SizedBox(height: 10),
 
                       // Forensic grid
@@ -246,10 +246,10 @@ class PiracyAlertsScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.colorCyan.withOpacity(0.15),
+                              backgroundColor: AppTheme.colorCyan.withValues(alpha: 0.15),
                               foregroundColor: AppTheme.colorCyan,
                               elevation: 0,
-                              side: BorderSide(color: AppTheme.colorCyan.withOpacity(0.4)),
+                              side: BorderSide(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                             ),
@@ -290,7 +290,7 @@ class PiracyAlertsScreen extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '$label: ',
-            style: const TextStyle(color: AppTheme.fgMuted, fontSize: 10),
+            style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
           ),
           Expanded(
             child: Text(

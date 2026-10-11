@@ -89,7 +89,7 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
           onPressed: () => Navigator.of(context).pop(false),
         ),
       ),
@@ -113,15 +113,15 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppTheme.colorCyan.withOpacity(0.12),
+                      color: AppTheme.colorCyan.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.colorCyan.withOpacity(0.4)),
+                      border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
                     ),
-                    child: const Icon(Icons.lock_person_rounded, color: AppTheme.colorCyan, size: 28),
+                    child: Icon(Icons.lock_person_rounded, color: AppTheme.colorCyan, size: 28),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'USERNAME RECIPIENT LOCK',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -135,13 +135,13 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.colorCyan.withOpacity(0.08),
+                    color: AppTheme.colorCyan.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.colorCyan.withOpacity(0.3)),
+                    border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     children: [
-                      const Text(
+                      Text(
                         'This .gdrm document is encrypted exclusively for recipient:',
                         style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
                         textAlign: TextAlign.center,
@@ -149,7 +149,7 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
                       const SizedBox(height: 6),
                       Text(
                         '@${widget.targetUsername}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.colorCyan,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -165,7 +165,7 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
                   Text(
                     'Currently logged in as @${state.cloudUsername}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -186,9 +186,9 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withOpacity(0.1),
+                      color: Colors.redAccent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
                     ),
                     child: Text(
                       _errorMessage!,
@@ -213,7 +213,7 @@ class _CloudAuthScreenState extends State<CloudAuthScreen> {
                 Center(
                   child: TextButton(
                     onPressed: _openRegister,
-                    child: const Text(
+                    child: Text(
                       'Need an account? Register with this username',
                       style: TextStyle(
                         color: AppTheme.colorCyan,

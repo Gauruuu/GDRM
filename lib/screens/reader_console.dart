@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -20,6 +23,7 @@ import 'piracy_screen.dart';
 import 'chrono_lock_screen.dart';
 import 'snail_trail_screen.dart';
 import 'global_auth_screen.dart';
+import 'privacy_policy_screen.dart';
 
 class ReaderConsole extends StatefulWidget {
   const ReaderConsole({super.key});
@@ -35,8 +39,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
   String? _loadedGdrmPath;
   int _currentPage = 1;
   int _totalPages = 0;
+  bool _isDragging = false;
+  double _basePinchZoom = 1.0;
 
   DateTime? _openTimestamp;
+  Timer? _sessionTimer;
+  Duration _activeReadingDuration = Duration.zero;
 
   // ── RiggedFile Live Countdown States ──
   Timer? _meltTimer;
@@ -55,6 +63,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
   @override
   void dispose() {
     _timerCancel();
+    _sessionTimer?.cancel();
     _writeCloseTrailLog();
     _viewerFocusNode.dispose();
     _ctrl.dispose();
@@ -547,6 +556,15 @@ class ReaderConsoleState extends State<ReaderConsole> {
 
     parsed = GdrmService.parse(finalWriteBytes);
     _openTimestamp = DateTime.now();
+    _activeReadingDuration = Duration.zero;
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && _openTimestamp != null) {
+        setState(() {
+          _activeReadingDuration = DateTime.now().difference(_openTimestamp!);
+        });
+      }
+    });
 
     if (parsed.metadata.hasTimeBomb && filePath != null) {
       final expiryTime = DateTime.parse(parsed.metadata.riggedExpiry).toUtc();
@@ -561,6 +579,46 @@ class ReaderConsoleState extends State<ReaderConsole> {
       _currentPage = 1;
       _totalPages = 0;
     });
+  }
+
+  void _closeFile() {
+    _timerCancel();
+    _sessionTimer?.cancel();
+    _writeCloseTrailLog();
+    final openTimeStr = _openTimestamp != null ? DateFormat('HH:mm:ss').format(_openTimestamp!) : '--';
+    final closeTimeStr = DateFormat('HH:mm:ss').format(DateTime.now());
+    final durationStr = _formatDuration(_activeReadingDuration);
+
+    final state = context.read<AppState>();
+    state.clearLoadedFile();
+
+    setState(() {
+      _loadedPdfPath = null;
+      _loadedGdrmPath = null;
+      _currentPage = 1;
+      _totalPages = 0;
+      _activeReadingDuration = Duration.zero;
+      _openTimestamp = null;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppTheme.bgGlassPanel,
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: AppTheme.colorCyan, size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'File Closed • Session: $durationStr (Open: $openTimeStr, Closed: $closeTimeStr)',
+                style: TextStyle(color: AppTheme.fgLight, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   Future<void> _handleSecurePrint() async {
@@ -606,14 +664,14 @@ class ReaderConsoleState extends State<ReaderConsole> {
               ),
             ],
           ),
-          content: const Text(
+          content: Text(
             'The author has disabled physical printing permission for this document.\n\nHardware print spooling and virtual printer export are prohibited by cryptographic container policy.',
             style: TextStyle(color: AppTheme.fgLight),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('DISMISS', style: TextStyle(color: AppTheme.colorCyan)),
+              child: Text('DISMISS', style: TextStyle(color: AppTheme.colorCyan)),
             ),
           ],
         ),
@@ -649,12 +707,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
         backgroundColor: AppTheme.bgGlassPanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: AppTheme.colorMagenta),
+          side: BorderSide(color: AppTheme.colorMagenta),
         ),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.gpp_maybe_rounded, color: AppTheme.colorMagenta),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Text(
               'Input Security Token',
               style: TextStyle(
@@ -669,14 +727,14 @@ class ReaderConsoleState extends State<ReaderConsole> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'This file container utilizes active FileRip protection.',
               style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
             ),
             const SizedBox(height: 12),
             Text(
               'WARNING: $attemptsLeft attempts remaining before asset data self-destructs.',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.colorAmber,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
@@ -686,7 +744,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
             TextField(
               controller: passwordController,
               obscureText: true,
-              style: const TextStyle(color: AppTheme.fgLight, fontSize: 13),
+              style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
               decoration: const InputDecoration(hintText: 'Secret container keyphrase'),
             ),
           ],
@@ -694,12 +752,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, null),
-            child: const Text('CANCEL',
+            child: Text('CANCEL',
                 style: TextStyle(color: AppTheme.fgMuted, fontWeight: FontWeight.bold)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, passwordController.text),
-            child: const Text('DECRYPT',
+            child: Text('DECRYPT',
                 style: TextStyle(color: AppTheme.colorCyan, fontWeight: FontWeight.bold)),
           ),
         ],
@@ -715,12 +773,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
-          side: const BorderSide(color: AppTheme.colorCyan),
+          side: BorderSide(color: AppTheme.colorCyan),
         ),
-        content: const Row(
+        content: Row(
           children: [
             Icon(Icons.lock_rounded, color: AppTheme.colorCyan, size: 16),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'File activated on this device. Sharing it will trigger piracy protection.',
@@ -734,20 +792,6 @@ class ReaderConsoleState extends State<ReaderConsole> {
     );
   }
 
-  void _closeFile() {
-    _timerCancel();
-    _writeCloseTrailLog();
-    setState(() {
-      _loadedPdfPath = null;
-      _loadedGdrmPath = null;
-      _currentPage = 1;
-      _totalPages = 0;
-      _openTimestamp = null;
-      _timeBombRemaining = Duration.zero;
-    });
-    context.read<AppState>().unloadGdrm();
-  }
-
   void _showMembersOnlyRequiredDialog() {
     if (!mounted) return;
     showDialog(
@@ -757,12 +801,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
         backgroundColor: AppTheme.bgGlassSidebar,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: AppTheme.colorCyan, width: 1.5),
+          side: BorderSide(color: AppTheme.colorCyan, width: 1.5),
         ),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.groups_rounded, color: AppTheme.colorCyan, size: 24),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'GDRM MEMBER ACCOUNT REQUIRED',
@@ -776,7 +820,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
             ),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -789,7 +833,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
                 height: 1.4,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'You must be signed in with a registered GDRM account to decrypt and access this protected container.',
               style: TextStyle(color: AppTheme.fgMuted, fontSize: 11, height: 1.4),
@@ -799,7 +843,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted, fontWeight: FontWeight.bold)),
+            child: Text('CANCEL', style: TextStyle(color: AppTheme.fgMuted, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
@@ -831,12 +875,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
         backgroundColor: AppTheme.bgGlassSidebar,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: AppTheme.colorAmber, width: 1.5),
+          side: BorderSide(color: AppTheme.colorAmber, width: 1.5),
         ),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.gpp_bad_rounded, color: AppTheme.colorAmber, size: 24),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'UNINTENDED RECEIVER WARNING',
@@ -854,7 +898,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'ACCESS BLOCKED: You are not the intended recipient of this .gdrm document.',
               style: TextStyle(
                 color: AppTheme.colorAmber,
@@ -876,13 +920,13 @@ class ReaderConsoleState extends State<ReaderConsole> {
                 children: [
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         'Intended Recipient: ',
                         style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
                       ),
                       Text(
                         '@$targetUsername',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.colorCyan,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -893,7 +937,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         'Your Current User: ',
                         style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
                       ),
@@ -911,7 +955,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
+            Text(
               'This document is cryptographically encrypted and locked to the recipient\'s unique username identity. Unauthorized users cannot decrypt or view its contents.',
               style: TextStyle(color: AppTheme.fgMuted, fontSize: 11, height: 1.4),
             ),
@@ -940,14 +984,14 @@ class ReaderConsoleState extends State<ReaderConsole> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppTheme.bgGlassPanel,
-        title: const Text('System Status Notice',
+        title: Text('System Status Notice',
             style: TextStyle(color: AppTheme.fgLight, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
-            child: Text(msg, style: const TextStyle(color: AppTheme.fgMuted, fontSize: 13))),
+            child: Text(msg, style: TextStyle(color: AppTheme.fgMuted, fontSize: 13))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: AppTheme.colorCyan)),
+            child: Text('OK', style: TextStyle(color: AppTheme.colorCyan)),
           ),
         ],
       ),
@@ -973,16 +1017,79 @@ class ReaderConsoleState extends State<ReaderConsole> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 720;
-    return Column(
-      children: [
-        _buildToolbar(isWide),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(isWide ? 20 : 10),
-            child: _loadedPdfPath == null ? _buildEmptyState() : _buildPdfView(),
+    return DropTarget(
+      onDragEntered: (details) => setState(() => _isDragging = true),
+      onDragExited: (details) => setState(() => _isDragging = false),
+      onDragDone: (details) async {
+        setState(() => _isDragging = false);
+        if (details.files.isNotEmpty) {
+          final firstFile = details.files.first;
+          final path = firstFile.path;
+          if (path.toLowerCase().endsWith('.gdrm')) {
+            await openFileFromPath(path);
+          } else {
+            _showError('Invalid file type dropped.\nPlease drop an encrypted .gdrm container file.');
+          }
+        }
+      },
+      child: Stack(
+        children: [
+          Column(
+            children: [
+              _buildToolbar(isWide),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(isWide ? 20 : 10),
+                  child: _loadedPdfPath == null ? _buildEmptyState() : _buildPdfView(),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          if (_isDragging)
+            Positioned.fill(
+              child: Container(
+                color: AppTheme.bgMain.withValues(alpha: 0.88),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgGlassPanel,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.colorCyan, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.colorCyan.withValues(alpha: 0.3),
+                          blurRadius: 30,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.file_download_outlined, color: AppTheme.colorCyan, size: 56),
+                        const SizedBox(height: 16),
+                        Text(
+                          'DROP .GDRM CONTAINER HERE',
+                          style: TextStyle(
+                            color: AppTheme.colorCyan,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Release to decrypt and open document securely',
+                          style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1012,10 +1119,10 @@ class ReaderConsoleState extends State<ReaderConsole> {
               _toolBtn('▶', () => _ctrl.nextPage()),
               const SizedBox(width: 8),
               _toolBtn('Zoom +',
-                  () => setState(() => _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.2).clamp(1.0, 6.0))),
+                  () => setState(() => _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.25).clamp(0.5, 10.0))),
               const SizedBox(width: 4),
               _toolBtn('Zoom –',
-                  () => setState(() => _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.2).clamp(1.0, 6.0))),
+                  () => setState(() => _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.25).clamp(0.5, 10.0))),
               const SizedBox(width: 4),
               _toolBtn('Reset', () => setState(() => _ctrl.zoomLevel = 1.0)),
               if (_loadedPdfPath != null) ...[
@@ -1039,24 +1146,62 @@ class ReaderConsoleState extends State<ReaderConsole> {
                 _toolBtn(
                   state.manifest.allowPrint ? 'Secure Print' : 'Print Prohibited',
                   _handleSecurePrint,
-                  fg: state.manifest.allowPrint ? AppTheme.colorCyan : Colors.redAccent.withOpacity(0.8),
+                  fg: state.manifest.allowPrint ? AppTheme.colorCyan : Colors.redAccent.withValues(alpha: 0.8),
                   icon: state.manifest.allowPrint ? Icons.print_rounded : Icons.print_disabled_rounded,
+                ),
+                const SizedBox(width: 8),
+                _toolBtn(
+                  'Privacy & Terms',
+                  () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                    );
+                  },
+                  fg: AppTheme.colorCyan,
+                  icon: Icons.shield_outlined,
                 ),
                 const SizedBox(width: 8),
                 _toolBtn(
                   'Close File',
                   _closeFile,
-                  fg: Colors.redAccent.withOpacity(0.9),
+                  fg: Colors.redAccent.withValues(alpha: 0.9),
                   icon: Icons.close_rounded,
                 ),
               ],
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              if (_openTimestamp != null && _loadedPdfPath != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.colorCyan.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.schedule_rounded, size: 13, color: AppTheme.colorCyan),
+                      const SizedBox(width: 6),
+                      Text(
+                        'OPEN: ${DateFormat('HH:mm:ss').format(_openTimestamp!)}  •  ${_formatDuration(_activeReadingDuration)}',
+                        style: TextStyle(
+                          color: AppTheme.colorCyan,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
               if (hasMelt && _timeBombRemaining > Duration.zero) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.12),
-                    border: Border.all(color: Colors.red.withOpacity(0.4)),
+                    color: Colors.red.withValues(alpha: 0.12),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(
@@ -1085,7 +1230,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
                 _loadedPdfPath == null
                     ? 'No File Loaded'
                     : 'Page $_currentPage / $_totalPages',
-                style: const TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
               ),
               const SizedBox(width: 8),
             ],
@@ -1111,6 +1256,16 @@ class ReaderConsoleState extends State<ReaderConsole> {
                     ),
                     const SizedBox(width: 6),
                     _iconBtn(
+                      Icons.shield_outlined,
+                      () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                        );
+                      },
+                      tooltip: 'Privacy & Legal Terms',
+                    ),
+                    const SizedBox(width: 6),
+                    _iconBtn(
                       Icons.close_rounded,
                       _closeFile,
                       tooltip: 'Close File',
@@ -1132,7 +1287,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
                   if (_loadedPdfPath != null) ...[_drmBadge(), const SizedBox(width: 8)],
                   Text(
                     _loadedPdfPath == null ? 'No File' : '$_currentPage / $_totalPages',
-                    style: const TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
                   ),
                 ],
               ),
@@ -1149,19 +1304,19 @@ class ReaderConsoleState extends State<ReaderConsole> {
                   _iconBtn(
                       Icons.zoom_in_rounded,
                       () => setState(
-                          () => _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.2).clamp(1.0, 6.0)),
+                          () => _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.25).clamp(0.5, 10.0)),
                       tooltip: 'Zoom In'),
                   _iconBtn(
                       Icons.zoom_out_rounded,
                       () => setState(
-                          () => _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.2).clamp(1.0, 6.0)),
+                          () => _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.25).clamp(0.5, 10.0)),
                       tooltip: 'Zoom Out'),
                   _iconBtn(Icons.fit_screen_rounded, () => setState(() => _ctrl.zoomLevel = 1.0),
                       tooltip: 'Reset'),
                 ],
               ),
             ),
-            const Divider(height: 1, color: AppTheme.borderGlass),
+            Divider(height: 1, color: AppTheme.borderGlass),
           ],
         ),
       );
@@ -1177,12 +1332,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isLocked
-            ? AppTheme.colorCyan.withOpacity(0.1)
-            : AppTheme.borderGlass.withOpacity(0.2),
+            ? AppTheme.colorCyan.withValues(alpha: 0.1)
+            : AppTheme.borderGlass.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color: isLocked
-              ? AppTheme.colorCyan.withOpacity(0.5)
+              ? AppTheme.colorCyan.withValues(alpha: 0.5)
               : AppTheme.borderGlass,
         ),
       ),
@@ -1219,13 +1374,13 @@ class ReaderConsoleState extends State<ReaderConsole> {
         decoration: BoxDecoration(
           color: AppTheme.bgGlassPanel,
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppTheme.colorCyan.withOpacity(0.6)),
+          border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.6)),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.folder_open_outlined, color: AppTheme.colorCyan, size: 16),
-            SizedBox(width: 6),
+            const SizedBox(width: 6),
             Text(
               'Open GDRM File',
               style: TextStyle(
@@ -1264,7 +1419,8 @@ class ReaderConsoleState extends State<ReaderConsole> {
   }
 
   Widget _toolBtn(String label, VoidCallback onTap,
-      {Color fg = AppTheme.fgLight, IconData? icon}) {
+      {Color? fg, IconData? icon}) {
+    final effectiveFg = fg ?? AppTheme.fgLight;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1278,12 +1434,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, color: fg, size: 14),
+              Icon(icon, color: effectiveFg, size: 14),
               const SizedBox(width: 6),
             ],
             Text(
               label,
-              style: TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 11),
+              style: TextStyle(color: effectiveFg, fontWeight: FontWeight.bold, fontSize: 11),
             ),
           ],
         ),
@@ -1292,16 +1448,16 @@ class ReaderConsoleState extends State<ReaderConsole> {
   }
 
   Widget _buildEmptyState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.picture_as_pdf_outlined, size: 56, color: AppTheme.borderGlass),
-          SizedBox(height: 14),
+          const SizedBox(height: 14),
           Text('No GDRM File Loaded',
               style: TextStyle(color: AppTheme.fgMuted, fontSize: 15)),
-          SizedBox(height: 5),
-          Text('Open a .gdrm file container to begin reading',
+          const SizedBox(height: 5),
+          Text('Drag & drop or open a .gdrm container to begin reading',
               style: TextStyle(color: AppTheme.borderGlass, fontSize: 12)),
         ],
       ),
@@ -1335,41 +1491,86 @@ class ReaderConsoleState extends State<ReaderConsole> {
         licensedTo: meta.licensedTo,
         copyrightOwner: meta.copyrightOwner,
         signature: meta.memeSignature,
+        fingerprint: meta.fingerprint,
         sessionOpenTime: _openTimestamp ?? DateTime.now(),
+        userId: context.watch<AppState>().cloudUsername?.isNotEmpty == true
+            ? '@${context.watch<AppState>().cloudUsername}'
+            : (meta.targetUsername.isNotEmpty ? '@${meta.targetUsername}' : null),
         child: Container(
           decoration: BoxDecoration(
             color: AppTheme.shadowDeep,
             borderRadius: BorderRadius.circular(4),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
                 color: AppTheme.shadowDeep,
                 blurRadius: 20,
-                offset: Offset(5, 5),
+                offset: const Offset(5, 5),
               ),
             ],
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: SfPdfViewer.file(
-              File(_loadedPdfPath!),
-              controller: _ctrl,
-              // Strictly disable text selection and context menu copying
-              enableTextSelection: false,
-              canShowTextSelectionMenu: false,
-              canShowPaginationDialog: false,
-              canShowScrollHead: false,
-              canShowScrollStatus: false,
-              pageSpacing: 8,
-              onDocumentLoaded: (details) {
-                setState(() {
-                  _totalPages = details.document.pages.count;
-                  _currentPage = 1;
-                });
+            child: Listener(
+              onPointerPanZoomStart: (event) {
+                _basePinchZoom = _ctrl.zoomLevel;
               },
-              onPageChanged: (details) {
-                setState(() => _currentPage = details.newPageNumber);
+              onPointerPanZoomUpdate: (event) {
+                if (event.scale != 1.0) {
+                  setState(() {
+                    _ctrl.zoomLevel = (_basePinchZoom * event.scale).clamp(0.5, 10.0);
+                  });
+                }
               },
-              onDocumentLoadFailed: (details) => _showError(details.description),
+              onPointerSignal: (pointerSignal) {
+                if (pointerSignal is PointerScrollEvent) {
+                  // Trackpad pinch or Ctrl + Mouse Wheel zoom
+                  if (HardwareKeyboard.instance.isControlPressed) {
+                    if (pointerSignal.scrollDelta.dy < 0) {
+                      setState(() {
+                        _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.15).clamp(0.5, 10.0);
+                      });
+                    } else if (pointerSignal.scrollDelta.dy > 0) {
+                      setState(() {
+                        _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.15).clamp(0.5, 10.0);
+                      });
+                    }
+                  }
+                }
+              },
+              child: GestureDetector(
+                onScaleStart: (details) {
+                  _basePinchZoom = _ctrl.zoomLevel;
+                },
+                onScaleUpdate: (details) {
+                  if (details.scale != 1.0) {
+                    setState(() {
+                      _ctrl.zoomLevel = (_basePinchZoom * details.scale).clamp(0.5, 10.0);
+                    });
+                  }
+                },
+                child: SfPdfViewer.file(
+                  File(_loadedPdfPath!),
+                  controller: _ctrl,
+                  // Strictly disable text selection and context menu copying
+                  enableTextSelection: false,
+                  canShowTextSelectionMenu: false,
+                  canShowPaginationDialog: false,
+                  canShowScrollHead: false,
+                  canShowScrollStatus: false,
+                  pageSpacing: 8,
+                  maxZoomLevel: 10.0,
+                  onDocumentLoaded: (details) {
+                    setState(() {
+                      _totalPages = details.document.pages.count;
+                      _currentPage = 1;
+                    });
+                  },
+                  onPageChanged: (details) {
+                    setState(() => _currentPage = details.newPageNumber);
+                  },
+                  onDocumentLoadFailed: (details) => _showError(details.description),
+                ),
+              ),
             ),
           ),
         ),
