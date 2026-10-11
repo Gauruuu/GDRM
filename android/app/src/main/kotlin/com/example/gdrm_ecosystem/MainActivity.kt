@@ -1,7 +1,9 @@
 package com.hlp.gdrm_ecosystem
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -19,6 +21,33 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun isUsbDebuggingEnabled(): Boolean {
+        return try {
+            Settings.Global.getInt(contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
+        } catch (e: Exception) {
+            try {
+                @Suppress("DEPRECATION")
+                Settings.Secure.getInt(contentResolver, Settings.Secure.ADB_ENABLED, 0) == 1
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    private fun openDeveloperSettings() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = Intent(Settings.ACTION_SETTINGS)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+            } catch (_: Exception) {}
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -30,6 +59,15 @@ class MainActivity : FlutterActivity() {
                             WindowManager.LayoutParams.FLAG_SECURE,
                             WindowManager.LayoutParams.FLAG_SECURE
                         )
+                        result.success(null)
+                    }
+
+                    "isUsbDebuggingEnabled" -> {
+                        result.success(isUsbDebuggingEnabled())
+                    }
+
+                    "openDeveloperSettings" -> {
+                        openDeveloperSettings()
                         result.success(null)
                     }
 

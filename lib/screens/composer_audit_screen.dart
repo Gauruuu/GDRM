@@ -10,8 +10,13 @@ import 'global_auth_screen.dart';
 
 class ComposerAuditScreen extends StatefulWidget {
   final String? initialSearchFingerprint;
+  final bool isEmbedded;
 
-  const ComposerAuditScreen({super.key, this.initialSearchFingerprint});
+  const ComposerAuditScreen({
+    super.key,
+    this.initialSearchFingerprint,
+    this.isEmbedded = false,
+  });
 
   @override
   State<ComposerAuditScreen> createState() => _ComposerAuditScreenState();
@@ -41,6 +46,109 @@ class _ComposerAuditScreenState extends State<ComposerAuditScreen> {
     final state = context.watch<AppState>();
     final currentUser = state.cloudUsername;
 
+    final bodyContent = Column(
+      children: [
+        if (widget.isEmbedded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(32, 32, 32, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tracked files',
+                        style: TextStyle(
+                          color: AppTheme.fgLight,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Monitor delivery, device bindings, and access trails of files you created.',
+                        style: TextStyle(
+                          color: AppTheme.fgMuted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded, color: AppTheme.fgLight, size: 20),
+                  onPressed: () => setState(() {}),
+                  tooltip: 'Refresh Registry',
+                ),
+              ],
+            ),
+          ),
+        // ── Search & Filter Bar ──
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: widget.isEmbedded ? 32 : 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.bgGlassSidebar,
+            border: Border(bottom: BorderSide(color: AppTheme.borderGlass)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (val) => setState(() => _filterQuery = val.trim().toLowerCase()),
+                  style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Search container hash, fingerprint, or recipient...',
+                    hintStyle: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                    prefixIcon: Icon(Icons.search_rounded, color: AppTheme.colorCyan, size: 18),
+                    suffixIcon: _filterQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: AppTheme.fgMuted, size: 16),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _filterQuery = '');
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppTheme.bgGlassPanel,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: AppTheme.borderGlass),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: AppTheme.borderGlass),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: AppTheme.colorCyan),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // ── Main Content / Query Stream ──
+        Expanded(
+          child: !state.isCloudAuthenticated && _filterQuery.isEmpty
+              ? _buildUnauthenticatedPrompt()
+              : _buildFilesList(currentUser),
+        ),
+      ],
+    );
+
+    if (widget.isEmbedded) {
+      return Container(
+        color: AppTheme.bgMain,
+        child: bodyContent,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.bgMain,
       appBar: AppBar(
@@ -54,7 +162,7 @@ class _ComposerAuditScreenState extends State<ComposerAuditScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'COMPOSER FILE AUDIT MATRIX',
+              'Tracked files',
               style: TextStyle(
                 color: AppTheme.fgLight,
                 fontSize: 14,
@@ -79,65 +187,7 @@ class _ComposerAuditScreenState extends State<ComposerAuditScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Column(
-        children: [
-          // ── Search & Filter Bar ──
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppTheme.bgGlassSidebar,
-              border: Border(bottom: BorderSide(color: AppTheme.borderGlass)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (val) => setState(() => _filterQuery = val.trim().toLowerCase()),
-                    style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search container hash, fingerprint, or recipient...',
-                      hintStyle: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
-                      prefixIcon: Icon(Icons.search_rounded, color: AppTheme.colorCyan, size: 18),
-                      suffixIcon: _filterQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(Icons.clear, color: AppTheme.fgMuted, size: 16),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _filterQuery = '');
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: AppTheme.bgGlassPanel,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppTheme.borderGlass),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppTheme.borderGlass),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: AppTheme.colorCyan),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Main Content / Query Stream ──
-          Expanded(
-            child: !state.isCloudAuthenticated && _filterQuery.isEmpty
-                ? _buildUnauthenticatedPrompt()
-                : _buildFilesList(currentUser),
-          ),
-        ],
-      ),
+      body: bodyContent,
     );
   }
 

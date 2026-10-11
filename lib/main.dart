@@ -36,7 +36,7 @@ class GDRMApp extends StatelessWidget {
         builder: (context, state, _) {
           AppTheme.isDark = state.isDarkMode;
           return MaterialApp(
-            title: 'GDRM Ecosystem',
+            title: 'GDRM V — The Milky Way',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,

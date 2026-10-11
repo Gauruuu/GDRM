@@ -3,13 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import 'shared_widgets.dart';
-import 'account_profile_dialog.dart';
-import '../screens/snail_trail_screen.dart';
 import '../screens/global_auth_screen.dart';
-import '../screens/piracy_alerts_screen.dart';
-import '../screens/composer_audit_screen.dart';
-import '../screens/privacy_policy_screen.dart';
+import 'account_profile_dialog.dart';
+import 'shared_widgets.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({super.key});
@@ -18,405 +14,226 @@ class AppSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
+    // Determine current user display info
+    final isAuthenticated = state.isCloudAuthenticated;
+    final displayName = isAuthenticated
+        ? (state.cloudDisplayName?.isNotEmpty == true
+            ? state.cloudDisplayName!
+            : state.cloudUsername!)
+        : 'Guest User';
+    final username = isAuthenticated
+        ? '@${state.cloudUsername!}'
+        : 'Sign In / Register';
+    final initial = isAuthenticated
+        ? (displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U')
+        : '?';
+
     return Container(
-      width: 270,
+      width: 250,
       decoration: BoxDecoration(
         color: AppTheme.bgGlassSidebar,
-        border: Border(right: BorderSide(color: AppTheme.borderGlass)),
+        border: Border(
+          right: BorderSide(color: AppTheme.borderGlass, width: 1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Header: GDRM V — The Milky Way Update ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 2),
-            child: Text(
-              'GDRM ECOSYSTEM',
-              style: TextStyle(
-                  color: AppTheme.fgLight,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Text('Custom Digital Right Manager',
-                style: TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
-          ),
-          NavButton(
-            label: 'READER CONSOLE',
-            active: state.currentView == AppView.reader,
-            onTap: () => state.switchView(AppView.reader),
-          ),
-          NavButton(
-            label: 'PACKER CONSOLE',
-            active: state.currentView == AppView.packer,
-            onTap: () => state.switchView(AppView.packer),
-          ),
-          
-          // ── User Identity & Firebase Auth Badge ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: UserAuthBadge(state: state),
-          ),
-
-          // ── Composer Packaged Files Tracker Quick Trigger ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ComposerAuditScreen(),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgGlassPanel,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: AppTheme.colorCyan.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.hub_outlined,
-                      color: AppTheme.colorCyan,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'TRACK PACKAGED FILES',
+            padding: const EdgeInsets.fromLTRB(18, 26, 18, 22),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const GdrmVLogoBadge(size: 44),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'GDRM',
+                            style: TextStyle(
+                              color: AppTheme.fgLight,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.6)),
+                            ),
+                            child: const Text(
+                              'V',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'THE MILKY WAY',
                         style: TextStyle(
-                          color: AppTheme.colorCyan,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.6,
+                          color: Color(0xFF10B981),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
                         ),
                       ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: AppTheme.colorCyan.withValues(alpha: 0.6),
-                      size: 10,
-                    ),
-                  ],
+                      Text(
+                        'Document rights manager',
+                        style: TextStyle(
+                          color: AppTheme.fgMuted,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
 
-          // ── Piracy & Security Alerts Quick Trigger ──
-          if (state.isCloudAuthenticated)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: GestureDetector(
+          // ── Navigation Items ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Column(
+              children: [
+                _SidebarNavItem(
+                  label: 'Reader',
+                  isActive: state.currentView == AppView.reader,
+                  onTap: () => state.switchView(AppView.reader),
+                ),
+                const SizedBox(height: 4),
+                _SidebarNavItem(
+                  label: 'Packer',
+                  isActive: state.currentView == AppView.packer,
+                  onTap: () => state.switchView(AppView.packer),
+                ),
+                const SizedBox(height: 4),
+                _SidebarNavItem(
+                  label: 'Tracked files',
+                  isActive: state.currentView == AppView.trackedFiles,
+                  onTap: () => state.switchView(AppView.trackedFiles),
+                ),
+                const SizedBox(height: 4),
+                _SidebarNavItem(
+                  label: 'Alerts',
+                  isActive: state.currentView == AppView.alerts,
+                  badgeCount: state.unreadPiracyAlertsCount,
+                  onTap: () => state.switchView(AppView.alerts),
+                ),
+              ],
+            ),
+          ),
+
+          const Spacer(),
+
+          // ── Bottom Profile Section ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => PiracyAlertsScreen(senderUsername: state.cloudUsername!),
-                    ),
-                  );
+                  if (state.isCloudAuthenticated) {
+                    showAccountProfileDialog(context);
+                  } else {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const GlobalAuthScreen()),
+                    );
+                  }
                 },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: state.unreadPiracyAlertsCount > 0
-                        ? Colors.redAccent.withValues(alpha: 0.12)
-                        : AppTheme.bgGlassPanel,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: state.unreadPiracyAlertsCount > 0
-                          ? Colors.redAccent.withValues(alpha: 0.6)
-                          : AppTheme.borderGlass,
-                    ),
-                  ),
+                hoverColor: AppTheme.borderGlass.withValues(alpha: 0.35),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   child: Row(
                     children: [
-                      Icon(
-                        state.unreadPiracyAlertsCount > 0
-                            ? Icons.warning_amber_rounded
-                            : Icons.shield_outlined,
-                        color: state.unreadPiracyAlertsCount > 0
-                            ? Colors.redAccent
-                            : AppTheme.colorCyan,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'PIRACY & ALERTS',
-                          style: TextStyle(
-                            color: state.unreadPiracyAlertsCount > 0
-                                ? Colors.redAccent
-                                : AppTheme.fgLight,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.6,
-                          ),
+                      // Circular Avatar (matches screenshot)
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.isDark
+                              ? AppTheme.darkPrimaryGreen.withValues(alpha: 0.25)
+                              : const Color(0xFF163E2E),
+                          border: AppTheme.isDark
+                              ? Border.all(color: AppTheme.darkPrimaryGreen.withValues(alpha: 0.5), width: 1)
+                              : null,
                         ),
-                      ),
-                      if (state.unreadPiracyAlertsCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                        child: Center(
                           child: Text(
-                            '${state.unreadPiracyAlertsCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
+                            initial,
+                            style: TextStyle(
+                              color: AppTheme.isDark ? AppTheme.darkPrimaryGreen : Colors.white,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: Divider(color: AppTheme.borderGlass, height: 1),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('ACTIVE SYSTEM MANIFEST',
-                      style: TextStyle(
-                          color: AppTheme.fgMuted,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8)),
-                  const SizedBox(height: 10),
-                  ManifestIndicator(
-                      title: 'Licensed To', value: state.manifest.licensedTo),
-                  ManifestIndicator(
-                      title: 'Copyright Owner',
-                      value: state.manifest.copyrightOwner),
-                  ManifestIndicator(
-                      title: 'Fingerprint',
-                      value: state.manifest.fingerprint,
-                      valueColor: AppTheme.colorAmber,
-                      isMono: true),
-                  ManifestIndicator(
-                      title: 'Signature',
-                      value: state.manifest.memeSignature,
-                      valueColor: AppTheme.colorMagenta),
-                  Divider(color: AppTheme.borderGlass),
-
-                  if (state.manifest.trailLogs.isNotEmpty) ...[
-                    Text(
-                      'FILE AUDIT MATRIX',
-                      style: TextStyle(
-                          color: AppTheme.fgMuted,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SnailTrailScreen(
-                              logs: state.manifest.trailLogs,
-                              fileFingerprint: state.manifest.fingerprint,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.bgGlassPanel,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                              color: AppTheme.colorCyan.withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.analytics_outlined,
-                                color: AppTheme.colorCyan, size: 14),
-                            const SizedBox(width: 8),
                             Text(
-                              'VIEW SNAILTRAIL LOGS',
+                              displayName,
                               style: TextStyle(
-                                  color: AppTheme.colorCyan,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                  letterSpacing: 0.5),
+                                color: AppTheme.fgLight,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              username,
+                              style: TextStyle(
+                                color: AppTheme.fgMuted,
+                                fontSize: 11.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Divider(color: AppTheme.borderGlass, height: 1),
-                    ),
-                  ],
-
-                  Text('DRM BINDING',
-                      style: TextStyle(
+                      // Theme Switch Quick Toggle
+                      IconButton(
+                        iconSize: 18,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                        splashRadius: 16,
+                        tooltip: state.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                        icon: Icon(
+                          state.isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
                           color: AppTheme.fgMuted,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8)),
-                  const SizedBox(height: 8),
-                  ManifestIndicator(
-                      title: 'Sender Token',
-                      value: state.manifest.sender.isEmpty
-                          ? '---'
-                          : '${state.manifest.sender.substring(0, 16)}...',
-                      valueColor: AppTheme.colorCyan,
-                      isMono: true),
-                  ManifestIndicator(
-                      title: 'Receiver Lock',
-                      value: state.manifest.hasCloudLock
-                          ? '@${state.manifest.targetUsername}'
-                          : (state.manifest.hasMembersOnlyLock
-                              ? 'MEMBERS ONLY'
-                              : (state.manifest.receiver.isEmpty
-                                  ? 'UNBOUND'
-                                  : '${state.manifest.receiver.substring(0, 16)}...')),
-                      valueColor: state.manifest.hasCloudLock
-                          ? AppTheme.colorCyan
-                          : (state.manifest.hasMembersOnlyLock
-                              ? Colors.greenAccent
-                              : (state.manifest.receiver.isEmpty
-                                  ? AppTheme.colorAmber
-                                  : Colors.greenAccent)),
-                      isMono: true),
-                  ManifestIndicator(
-                      title: 'Print Permission',
-                      value: state.manifest.allowPrint ? 'PERMITTED' : 'RESTRICTED',
-                      valueColor: state.manifest.allowPrint
-                          ? Colors.greenAccent
-                          : Colors.redAccent,
-                      isMono: true),
-                  const SizedBox(height: 8),
-                  _DrmStatusChip(meta: state.manifest),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Privacy Policy & Anti-Tampering Legal Directives ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PrivacyPolicyScreen(),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgGlassPanel,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.shield_rounded,
-                        color: AppTheme.colorCyan,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'PRIVACY & LEGAL TERMS',
-                          style: TextStyle(
-                            color: AppTheme.colorCyan,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
                         ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: AppTheme.colorCyan.withValues(alpha: 0.6),
-                        size: 10,
+                        onPressed: () => state.toggleTheme(),
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-          ),
-
-          // ── Theme Switcher ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: () => state.toggleTheme(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgGlassPanel,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.borderGlass),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        state.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                        color: state.isDarkMode ? AppTheme.colorCyan : AppTheme.colorAmber,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          state.isDarkMode ? 'DARK THEME' : 'LIGHT THEME',
-                          style: TextStyle(
-                            color: AppTheme.fgLight,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        state.isDarkMode ? Icons.toggle_off_rounded : Icons.toggle_on_rounded,
-                        color: state.isDarkMode ? AppTheme.colorCyan : AppTheme.colorAmber,
-                        size: 24,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            child: Text('GDRM Document Protection Ecosystem',
-                style: TextStyle(color: AppTheme.footerGray, fontSize: 9)),
           ),
         ],
       ),
@@ -424,6 +241,73 @@ class AppSidebar extends StatelessWidget {
   }
 }
 
+class _SidebarNavItem extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  final int badgeCount;
+
+  const _SidebarNavItem({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.badgeCount = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isActive ? AppTheme.navActiveBg : Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        hoverColor: isActive
+            ? null
+            : AppTheme.borderGlass.withValues(alpha: 0.35),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isActive ? AppTheme.navActiveFg : AppTheme.fgLight,
+                    fontSize: 13.5,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              if (badgeCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kept for compatibility with mobile drawer
 class UserAuthBadge extends StatelessWidget {
   final AppState state;
 
@@ -431,156 +315,73 @@ class UserAuthBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.isCloudAuthenticated) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () => showAccountProfileDialog(context),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.colorCyan.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.35)),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppTheme.colorCyan.withValues(alpha: 0.25),
-                  child: Text(
-                    state.cloudDisplayName?.isNotEmpty == true
-                        ? state.cloudDisplayName![0].toUpperCase()
-                        : (state.cloudUsername?.isNotEmpty == true
-                            ? state.cloudUsername![0].toUpperCase()
-                            : 'U'),
-                    style: TextStyle(
-                      color: AppTheme.colorCyan,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        state.cloudDisplayName?.isNotEmpty == true
-                            ? state.cloudDisplayName!
-                            : state.cloudUsername!,
-                        style: TextStyle(
-                          color: AppTheme.fgLight,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '@${state.cloudUsername}',
-                        style: TextStyle(
-                          color: AppTheme.colorCyan,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Tooltip(
-                  message: 'Manage Account (Verify Email, Delete Account)',
-                  child: Icon(Icons.manage_accounts_rounded, color: AppTheme.colorCyan, size: 18),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    } else {
-      return GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const GlobalAuthScreen()),
-          );
-        },
+    final isAuthenticated = state.isCloudAuthenticated;
+    final displayName = isAuthenticated
+        ? (state.cloudDisplayName?.isNotEmpty == true
+            ? state.cloudDisplayName!
+            : state.cloudUsername!)
+        : 'Guest User';
+    final username = isAuthenticated
+        ? '@${state.cloudUsername!}'
+        : 'Sign In / Register';
+    final initial = isAuthenticated
+        ? (displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U')
+        : '?';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => showAccountProfileDialog(context),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppTheme.bgGlassPanel,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.35)),
+            color: AppTheme.navActiveBg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.borderGlass),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.login_rounded, color: AppTheme.colorCyan, size: 14),
-              const SizedBox(width: 6),
-              Text(
-                'SIGN IN / REGISTER',
-                style: TextStyle(
-                  color: AppTheme.colorCyan,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                  letterSpacing: 0.6,
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppTheme.isDark ? AppTheme.darkPrimaryGreen : const Color(0xFF163E2E),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        color: AppTheme.fgLight,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      username,
+                      style: TextStyle(
+                        color: AppTheme.fgMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-      );
-    }
-  }
-}
-
-class _DrmStatusChip extends StatelessWidget {
-  final dynamic meta;
-  const _DrmStatusChip({required this.meta});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool hasSecurity = meta.hasSecurity as bool;
-    final bool hasReceiver = meta.hasReceiver as bool;
-
-    final Color color;
-    final String label;
-    final IconData icon;
-
-    if (!hasSecurity) {
-      color = AppTheme.fgMuted;
-      label = 'LEGACY FILE';
-      icon = Icons.lock_open_rounded;
-    } else if (!hasReceiver) {
-      color = AppTheme.colorAmber;
-      label = 'UNBOUND';
-      icon = Icons.lock_clock_rounded;
-    } else {
-      color = Colors.greenAccent;
-      label = 'LOCKED & BOUND';
-      icon = Icons.verified_user_rounded;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withValues(alpha: 0.35))),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 11),
-          const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5)),
-        ],
       ),
     );
   }

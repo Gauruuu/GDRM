@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
@@ -16,6 +17,7 @@ import '../services/device_key_service.dart';
 import '../services/content_uri_service.dart';
 import '../services/printing_service.dart';
 import '../services/piracy_service.dart';
+import '../services/security_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/dynamic_watermark.dart';
@@ -24,6 +26,7 @@ import 'chrono_lock_screen.dart';
 import 'snail_trail_screen.dart';
 import 'global_auth_screen.dart';
 import 'privacy_policy_screen.dart';
+import '../widgets/shared_widgets.dart';
 
 class ReaderConsole extends StatefulWidget {
   const ReaderConsole({super.key});
@@ -46,6 +49,14 @@ class ReaderConsoleState extends State<ReaderConsole> {
   Timer? _sessionTimer;
   Duration _activeReadingDuration = Duration.zero;
 
+  // Active document cache for robust close recording on app exit/dispose
+  bool _hasRecordedClose = false;
+  GdrmMetadata? _cachedManifest;
+  String? _cachedCloudUsername;
+
+  // App lifecycle listener to ensure window/app close marks file as closed
+  late final AppLifecycleListener _lifecycleListener;
+
   // ── RiggedFile Live Countdown States ──
   Timer? _meltTimer;
   Duration _timeBombRemaining = Duration.zero;
@@ -57,14 +68,28 @@ class ReaderConsoleState extends State<ReaderConsole> {
   @override
   void initState() {
     super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onExitRequested: () async {
+        await writeCloseTrailLog();
+        return AppExitResponse.exit;
+      },
+      onStateChange: (state) {
+        if (state == AppLifecycleState.paused ||
+            state == AppLifecycleState.detached ||
+            state == AppLifecycleState.hidden) {
+          writeCloseTrailLog();
+        }
+      },
+    );
     _resolveNetworkInfo();
   }
 
   @override
   void dispose() {
+    _lifecycleListener.dispose();
     _timerCancel();
     _sessionTimer?.cancel();
-    _writeCloseTrailLog();
+    writeCloseTrailLog();
     _viewerFocusNode.dispose();
     _ctrl.dispose();
     super.dispose();
@@ -145,14 +170,19 @@ class ReaderConsoleState extends State<ReaderConsole> {
     }
   }
 
-  void _writeCloseTrailLog() async {
+  Future<void> writeCloseTrailLog() async {
+    if (_hasRecordedClose) return;
     if (_loadedGdrmPath == null || _openTimestamp == null) return;
+    _hasRecordedClose = true;
+
     try {
-      final state = context.read<AppState>();
       final deviceKey = await DeviceKeyService.getDeviceKey();
       final currentBytes = await File(_loadedGdrmPath!).readAsBytes();
-      final activeSeconds = DateTime.now().difference(_openTimestamp!).inSeconds;
-      final details = 'Session closed. Duration: ${activeSeconds}s, ExitPage: $_currentPage (IP: $_deviceIp)';
+      final closeTimestamp = DateTime.now();
+      final activeSeconds = closeTimestamp.difference(_openTimestamp!).inSeconds;
+      final openedFormatted = DateFormat('yyyy-MM-dd HH:mm:ss').format(_openTimestamp!);
+      final closedFormatted = DateFormat('yyyy-MM-dd HH:mm:ss').format(closeTimestamp);
+      final details = 'Session closed. Opened: $openedFormatted, Closed: $closedFormatted (${activeSeconds}s), ExitPage: $_currentPage (IP: $_deviceIp)';
 
       final closedBytes = GdrmService.appendTrailLog(
         rawFileBytes: currentBytes,
@@ -162,20 +192,28 @@ class ReaderConsoleState extends State<ReaderConsole> {
       );
       await GdrmService.writeFile(_loadedGdrmPath!, closedBytes);
 
-      // Record in cloud database snail trail
-      if (state.manifest.fingerprint != '---') {
-        PiracyService.recordDatabaseSnailTrail(
-          fingerprint: state.manifest.fingerprint,
+      // Resolve manifest and username safely from cache or mounted state
+      final meta = _cachedManifest ?? (mounted ? context.read<AppState>().manifest : GdrmMetadata.empty);
+      final activeUser = _cachedCloudUsername ?? (mounted ? context.read<AppState>().cloudUsername : null);
+
+      // Record in cloud database snail trail with opening and closing timestamps
+      if (meta.fingerprint != '---' && meta.fingerprint.isNotEmpty) {
+        await PiracyService.recordDatabaseSnailTrail(
+          fingerprint: meta.fingerprint,
           action: 'CLOSED',
           deviceKey: deviceKey,
           details: details,
-          senderUsername: state.manifest.senderUsername,
-          activeUsername: state.cloudUsername,
+          senderUsername: meta.senderUsername,
+          activeUsername: activeUser,
           ipAddress: _deviceIp,
           macAddress: _deviceMac,
+          openedAt: _openTimestamp,
+          closedAt: closeTimestamp,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ReaderConsole] writeCloseTrailLog note: $e');
+    }
   }
 
   Future<void> openFileFromPath(String pathOrUri) async {
@@ -232,9 +270,10 @@ class ReaderConsoleState extends State<ReaderConsole> {
   }
 
   Future<void> _processBytes(Uint8List bytes, String? filePath) async {
-    _writeCloseTrailLog();
+    await writeCloseTrailLog();
     _meltTimer?.cancel();
 
+    if (!mounted) return;
     final state = context.read<AppState>();
     final initialHeader = String.fromCharCodes(bytes.take(30));
     final deviceKey = await DeviceKeyService.getDeviceKey();
@@ -258,6 +297,22 @@ class ReaderConsoleState extends State<ReaderConsole> {
     }
 
     var meta = parsed.metadata;
+
+    // ── Anti-Forensic USB Debugging / ADB Restriction ──
+    if (Platform.isAndroid && await SecurityService.isUsbDebuggingEnabled()) {
+      final fileName = filePath != null ? filePath.split(Platform.pathSeparator).last : 'Document.gdrm';
+      PiracyService.reportPiracyAttempt(
+        manifest: meta,
+        pirateDeviceKey: deviceKey,
+        pirateIp: _deviceIp,
+        pirateMac: _deviceMac,
+        pirateUsername: state.cloudUsername ?? 'Anonymous Guest',
+        fileName: fileName,
+        reason: 'USB Debugging Violation: Android device has active ADB / USB Debugging enabled during container decryption attempt.',
+      );
+      _showUsbDebuggingDialog();
+      return;
+    }
 
     // ── RiggedFile Static Lifespan Check ──
     if (meta.isTimeBombed) {
@@ -524,9 +579,20 @@ class ReaderConsoleState extends State<ReaderConsole> {
           GdrmService.incrementOpeningCounter(finalWriteBytes, meta.currentOpens);
     }
 
+    // If a document was already open, ensure its close event is recorded first
+    if (_loadedGdrmPath != null && !_hasRecordedClose) {
+      await writeCloseTrailLog();
+    }
+
+    final openTime = DateTime.now();
+    _openTimestamp = openTime;
+    _hasRecordedClose = false;
+    _cachedManifest = meta;
+    _cachedCloudUsername = state.cloudUsername;
+    final openedFormatted = DateFormat('yyyy-MM-dd HH:mm:ss').format(openTime);
     final openDetails = meta.hasOpenLimit
-        ? 'Access verified. View: ${meta.currentOpens + 1} / ${meta.maxOpens}'
-        : 'Decryption verified (IP: $_deviceIp, MAC: $_deviceMac).';
+        ? 'Access verified at $openedFormatted. View: ${meta.currentOpens + 1} / ${meta.maxOpens}'
+        : 'Decryption verified at $openedFormatted (IP: $_deviceIp, MAC: $_deviceMac).';
 
     finalWriteBytes = GdrmService.appendTrailLog(
       rawFileBytes: finalWriteBytes,
@@ -542,7 +608,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
       } catch (_) {}
     }
 
-    // Sync open event to Firestore database snail trail
+    // Sync open event with precise opening timestamp to Firestore database snail trail
     PiracyService.recordDatabaseSnailTrail(
       fingerprint: meta.fingerprint,
       action: 'OPENED',
@@ -552,10 +618,10 @@ class ReaderConsoleState extends State<ReaderConsole> {
       activeUsername: state.cloudUsername,
       ipAddress: _deviceIp,
       macAddress: _deviceMac,
+      openedAt: openTime,
     );
 
     parsed = GdrmService.parse(finalWriteBytes);
-    _openTimestamp = DateTime.now();
     _activeReadingDuration = Duration.zero;
     _sessionTimer?.cancel();
     _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -581,16 +647,18 @@ class ReaderConsoleState extends State<ReaderConsole> {
     });
   }
 
-  void _closeFile() {
+  void _closeFile() async {
     _timerCancel();
     _sessionTimer?.cancel();
-    _writeCloseTrailLog();
+    await writeCloseTrailLog();
     final openTimeStr = _openTimestamp != null ? DateFormat('HH:mm:ss').format(_openTimestamp!) : '--';
     final closeTimeStr = DateFormat('HH:mm:ss').format(DateTime.now());
     final durationStr = _formatDuration(_activeReadingDuration);
 
-    final state = context.read<AppState>();
-    state.clearLoadedFile();
+    if (mounted) {
+      final state = context.read<AppState>();
+      state.clearLoadedFile();
+    }
 
     setState(() {
       _loadedPdfPath = null;
@@ -599,7 +667,11 @@ class ReaderConsoleState extends State<ReaderConsole> {
       _totalPages = 0;
       _activeReadingDuration = Duration.zero;
       _openTimestamp = null;
+      _cachedManifest = null;
+      _cachedCloudUsername = null;
     });
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -982,7 +1054,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
     if (!mounted) return;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppTheme.bgGlassPanel,
         title: Text('System Status Notice',
             style: TextStyle(color: AppTheme.fgLight, fontWeight: FontWeight.bold)),
@@ -990,8 +1062,90 @@ class ReaderConsoleState extends State<ReaderConsole> {
             child: Text(msg, style: TextStyle(color: AppTheme.fgMuted, fontSize: 13))),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogCtx),
             child: Text('OK', style: TextStyle(color: AppTheme.colorCyan)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUsbDebuggingDialog() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.bgGlassPanel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Colors.redAccent, width: 1.2),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.usb_off_rounded, color: Colors.redAccent, size: 22),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'USB DEBUGGING DETECTED',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'GDRM security policy strictly prohibits opening or decrypting protected containers while USB Debugging (ADB) is enabled on this device.',
+              style: TextStyle(color: AppTheme.fgLight, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.security_rounded, color: Colors.redAccent, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please disable USB Debugging in Android Developer Options to unlock secure document viewing.',
+                      style: TextStyle(color: AppTheme.fgLight, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text('DISMISS', style: TextStyle(color: AppTheme.fgMuted, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.colorCyan,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            ),
+            icon: const Icon(Icons.settings_rounded, size: 14),
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              SecurityService.openDeveloperSettings();
+            },
+            label: const Text('DEVELOPER SETTINGS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
           ),
         ],
       ),
@@ -1038,9 +1192,16 @@ class ReaderConsoleState extends State<ReaderConsole> {
             children: [
               _buildToolbar(isWide),
               Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(isWide ? 20 : 10),
-                  child: _loadedPdfPath == null ? _buildEmptyState() : _buildPdfView(),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.all(isWide ? 20 : 10),
+                        child: _loadedPdfPath == null ? _buildEmptyState() : _buildPdfView(),
+                      ),
+                    ),
+                    if (isWide) _buildFileDetailsPanel(),
+                  ],
                 ),
               ),
             ],
@@ -1055,10 +1216,10 @@ class ReaderConsoleState extends State<ReaderConsole> {
                     decoration: BoxDecoration(
                       color: AppTheme.bgGlassPanel,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.colorCyan, width: 2),
+                      border: Border.all(color: AppTheme.primaryGreen, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.colorCyan.withValues(alpha: 0.3),
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.2),
                           blurRadius: 30,
                         ),
                       ],
@@ -1066,12 +1227,12 @@ class ReaderConsoleState extends State<ReaderConsole> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.file_download_outlined, color: AppTheme.colorCyan, size: 56),
+                        Icon(Icons.file_download_outlined, color: AppTheme.primaryGreen, size: 56),
                         const SizedBox(height: 16),
                         Text(
                           'DROP .GDRM CONTAINER HERE',
                           style: TextStyle(
-                            color: AppTheme.colorCyan,
+                            color: AppTheme.primaryGreen,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             letterSpacing: 1.2,
@@ -1099,142 +1260,49 @@ class ReaderConsoleState extends State<ReaderConsole> {
 
     if (isWide) {
       return Container(
-        height: 60,
-        margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: AppTheme.bgGlassSidebar,
-          border: Border.all(color: AppTheme.borderGlass),
-          borderRadius: BorderRadius.circular(6),
+          border: Border(bottom: BorderSide(color: AppTheme.borderGlass)),
         ),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _toolBtn('Open GDRM File', _openFilePicker,
-                  fg: AppTheme.colorCyan, icon: Icons.folder_open_outlined),
-              const SizedBox(width: 8),
-              _toolBtn('◀', () => _ctrl.previousPage()),
-              const SizedBox(width: 4),
-              _toolBtn('▶', () => _ctrl.nextPage()),
-              const SizedBox(width: 8),
-              _toolBtn('Zoom +',
-                  () => setState(() => _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.25).clamp(0.5, 10.0))),
-              const SizedBox(width: 4),
-              _toolBtn('Zoom –',
-                  () => setState(() => _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.25).clamp(0.5, 10.0))),
-              const SizedBox(width: 4),
-              _toolBtn('Reset', () => setState(() => _ctrl.zoomLevel = 1.0)),
-              if (_loadedPdfPath != null) ...[
-                const SizedBox(width: 8),
-                _toolBtn(
-                  'Audit Trail',
-                  () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SnailTrailScreen(
-                          logs: state.manifest.trailLogs,
-                          fileFingerprint: state.manifest.fingerprint,
-                        ),
-                      ),
-                    );
-                  },
-                  fg: AppTheme.colorAmber,
-                  icon: Icons.analytics_outlined,
+        child: Row(
+          children: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              ),
+              onPressed: _openFilePicker,
+              child: const Text('Open file', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            ),
+            const SizedBox(width: 8),
+            _secondaryToolBtn('←', () => _ctrl.previousPage()),
+            const SizedBox(width: 4),
+            _secondaryToolBtn('→', () => _ctrl.nextPage()),
+            const Spacer(),
+            if (hasMelt && _timeBombRemaining > Duration.zero) ...[
+              Text(
+                'MELT IN: ${_formatDuration(_timeBombRemaining)}',
+                style: const TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
                 ),
-                const SizedBox(width: 8),
-                _toolBtn(
-                  state.manifest.allowPrint ? 'Secure Print' : 'Print Prohibited',
-                  _handleSecurePrint,
-                  fg: state.manifest.allowPrint ? AppTheme.colorCyan : Colors.redAccent.withValues(alpha: 0.8),
-                  icon: state.manifest.allowPrint ? Icons.print_rounded : Icons.print_disabled_rounded,
-                ),
-                const SizedBox(width: 8),
-                _toolBtn(
-                  'Privacy & Terms',
-                  () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-                    );
-                  },
-                  fg: AppTheme.colorCyan,
-                  icon: Icons.shield_outlined,
-                ),
-                const SizedBox(width: 8),
-                _toolBtn(
-                  'Close File',
-                  _closeFile,
-                  fg: Colors.redAccent.withValues(alpha: 0.9),
-                  icon: Icons.close_rounded,
-                ),
-              ],
-              const SizedBox(width: 12),
-              if (_openTimestamp != null && _loadedPdfPath != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppTheme.colorCyan.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.schedule_rounded, size: 13, color: AppTheme.colorCyan),
-                      const SizedBox(width: 6),
-                      Text(
-                        'OPEN: ${DateFormat('HH:mm:ss').format(_openTimestamp!)}  •  ${_formatDuration(_activeReadingDuration)}',
-                        style: TextStyle(
-                          color: AppTheme.colorCyan,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              if (hasMelt && _timeBombRemaining > Duration.zero) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.timer_10_rounded, color: Colors.redAccent, size: 13),
-                      const SizedBox(width: 6),
-                      Text(
-                        'MELT IN: ${_formatDuration(_timeBombRemaining)}',
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-              ],
-              if (_loadedPdfPath != null) ...[
-                _drmBadge(),
-                const SizedBox(width: 12),
-              ],
+              ),
+            ] else ...[
               Text(
                 _loadedPdfPath == null
-                    ? 'No File Loaded'
-                    : 'Page $_currentPage / $_totalPages',
-                style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                    ? 'No file loaded'
+                    : 'Page $_currentPage of $_totalPages',
+                style: TextStyle(color: AppTheme.fgMuted, fontSize: 13),
               ),
-              const SizedBox(width: 8),
             ],
-          ),
+          ],
         ),
       );
     } else {
@@ -1243,18 +1311,33 @@ class ReaderConsoleState extends State<ReaderConsole> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
               child: Row(
                 children: [
-                  Expanded(child: _mobileOpenBtn()),
-                  if (_loadedPdfPath != null) ...[
-                    const SizedBox(width: 6),
+                  if (_loadedPdfPath == null)
+                    Expanded(child: _mobileOpenBtn())
+                  else ...[
                     _iconBtn(
-                      state.manifest.allowPrint ? Icons.print_rounded : Icons.print_disabled_rounded,
-                      _handleSecurePrint,
-                      tooltip: state.manifest.allowPrint ? 'Secure Print' : 'Printing Prohibited',
+                      Icons.folder_open_outlined,
+                      _openFilePicker,
+                      tooltip: 'Open Another File',
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
+                    _drmBadge(isCompact: true),
+                    const SizedBox(width: 8),
+                    if (hasMelt && _timeBombRemaining > Duration.zero) ...[
+                      Text(
+                        _formatDuration(_timeBombRemaining),
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    const Spacer(),
                     _iconBtn(
                       Icons.shield_outlined,
                       () {
@@ -1271,51 +1354,32 @@ class ReaderConsoleState extends State<ReaderConsole> {
                       tooltip: 'Close File',
                     ),
                   ],
-                  const SizedBox(width: 8),
-                  if (hasMelt && _timeBombRemaining > Duration.zero) ...[
+                ],
+              ),
+            ),
+            if (_loadedPdfPath != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _iconBtn(Icons.arrow_back_ios_rounded, () => _ctrl.previousPage(),
+                        tooltip: 'Previous'),
+                    const SizedBox(width: 16),
                     Text(
-                      _formatDuration(_timeBombRemaining),
-                      style: const TextStyle(
-                        color: Colors.redAccent,
+                      'Page $_currentPage of $_totalPages',
+                      style: TextStyle(
+                        color: AppTheme.fgMuted,
                         fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 16),
+                    _iconBtn(Icons.arrow_forward_ios_rounded, () => _ctrl.nextPage(),
+                        tooltip: 'Next'),
                   ],
-                  if (_loadedPdfPath != null) ...[_drmBadge(), const SizedBox(width: 8)],
-                  Text(
-                    _loadedPdfPath == null ? 'No File' : '$_currentPage / $_totalPages',
-                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
-                  ),
-                ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _iconBtn(Icons.arrow_back_ios_rounded, () => _ctrl.previousPage(),
-                      tooltip: 'Previous'),
-                  _iconBtn(Icons.arrow_forward_ios_rounded, () => _ctrl.nextPage(),
-                      tooltip: 'Next'),
-                  _iconBtn(
-                      Icons.zoom_in_rounded,
-                      () => setState(
-                          () => _ctrl.zoomLevel = (_ctrl.zoomLevel * 1.25).clamp(0.5, 10.0)),
-                      tooltip: 'Zoom In'),
-                  _iconBtn(
-                      Icons.zoom_out_rounded,
-                      () => setState(
-                          () => _ctrl.zoomLevel = (_ctrl.zoomLevel / 1.25).clamp(0.5, 10.0)),
-                      tooltip: 'Zoom Out'),
-                  _iconBtn(Icons.fit_screen_rounded, () => setState(() => _ctrl.zoomLevel = 1.0),
-                      tooltip: 'Reset'),
-                ],
-              ),
-            ),
             Divider(height: 1, color: AppTheme.borderGlass),
           ],
         ),
@@ -1323,10 +1387,21 @@ class ReaderConsoleState extends State<ReaderConsole> {
     }
   }
 
-  Widget _drmBadge() {
+  Widget _drmBadge({bool isCompact = false}) {
     final state = context.read<AppState>();
     final isLocked = state.manifest.hasSecurity;
     final hasUserLock = state.manifest.hasCloudLock;
+
+    String labelText;
+    if (isCompact) {
+      labelText = hasUserLock
+          ? '@${state.manifest.targetUsername.toUpperCase()}'
+          : (isLocked ? 'DRM' : 'LEGACY');
+    } else {
+      labelText = hasUserLock
+          ? 'LOCKED TO @${state.manifest.targetUsername.toUpperCase()}'
+          : (isLocked ? 'DRM PROTECTED' : 'LEGACY');
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1351,9 +1426,7 @@ class ReaderConsoleState extends State<ReaderConsole> {
           ),
           const SizedBox(width: 4),
           Text(
-            hasUserLock
-                ? 'LOCKED TO @${state.manifest.targetUsername.toUpperCase()}'
-                : (isLocked ? 'DRM PROTECTED' : 'LEGACY'),
+            labelText,
             style: TextStyle(
               color: isLocked ? AppTheme.colorCyan : AppTheme.fgMuted,
               fontSize: 9,
@@ -1418,47 +1491,260 @@ class ReaderConsoleState extends State<ReaderConsole> {
     );
   }
 
-  Widget _toolBtn(String label, VoidCallback onTap,
-      {Color? fg, IconData? icon}) {
-    final effectiveFg = fg ?? AppTheme.fgLight;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+
+
+  Widget _secondaryToolBtn(String label, VoidCallback onTap) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: AppTheme.secondaryBtnBg,
+        foregroundColor: AppTheme.fgLight,
+        side: BorderSide(color: AppTheme.secondaryBtnBorder),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.bgGlassPanel,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppTheme.borderGlass),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, color: effectiveFg, size: 14),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: TextStyle(color: effectiveFg, fontWeight: FontWeight.bold, fontSize: 11),
-            ),
-          ],
-        ),
+        minimumSize: Size.zero,
       ),
+      onPressed: onTap,
+      child: Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500)),
     );
   }
 
   Widget _buildEmptyState() {
     return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        constraints: const BoxConstraints(maxWidth: 860, maxHeight: 620),
+        child: DashedContainer(
+          borderRadius: BorderRadius.circular(10),
+          color: AppTheme.borderGlass,
+          strokeWidth: 1.5,
+          dash: 6,
+          gap: 6,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.folder_open_rounded, size: 28, color: AppTheme.primaryGreen),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Open a .gdrm file',
+                  style: TextStyle(
+                    color: AppTheme.fgLight,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Drag and drop your file here, or click below to browse',
+                  style: TextStyle(
+                    color: AppTheme.fgMuted,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  icon: const Icon(Icons.file_open_rounded, size: 16),
+                  label: const Text(
+                    'Open file',
+                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: _openFilePicker,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFileDetailsPanel() {
+    final state = context.watch<AppState>();
+    final meta = state.manifest;
+    final isLoaded = _loadedPdfPath != null;
+
+    String lockText = 'Unbound';
+    Color lockColor = AppTheme.colorAmber;
+    if (isLoaded) {
+      if (meta.hasCloudLock && meta.targetUsername.isNotEmpty) {
+        lockText = '@${meta.targetUsername}';
+        lockColor = AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen;
+      } else if (meta.hasMembersOnlyLock) {
+        lockText = 'Members only';
+        lockColor = AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen;
+      } else if (meta.receiver.isNotEmpty) {
+        lockText = 'Bound';
+        lockColor = AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen;
+      }
+    }
+
+    final printText = isLoaded ? (meta.allowPrint ? 'Permitted' : 'Prohibited') : 'Permitted';
+    final printColor = (isLoaded && !meta.allowPrint)
+        ? Colors.redAccent
+        : (AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen);
+
+    return Container(
+      width: 260,
+      decoration: BoxDecoration(
+        color: AppTheme.bgGlassSidebar,
+        border: Border(left: BorderSide(color: AppTheme.borderGlass)),
+      ),
+      padding: const EdgeInsets.all(24),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.picture_as_pdf_outlined, size: 56, color: AppTheme.borderGlass),
-          const SizedBox(height: 14),
-          Text('No GDRM File Loaded',
-              style: TextStyle(color: AppTheme.fgMuted, fontSize: 15)),
-          const SizedBox(height: 5),
-          Text('Drag & drop or open a .gdrm container to begin reading',
-              style: TextStyle(color: AppTheme.borderGlass, fontSize: 12)),
+          Text(
+            'FILE DETAILS',
+            style: TextStyle(
+              color: AppTheme.fgMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _detailKeyVal('Licensed to', isLoaded && meta.licensedTo.isNotEmpty ? meta.licensedTo : '—'),
+          _detailKeyVal('Copyright owner', isLoaded && meta.copyrightOwner.isNotEmpty ? meta.copyrightOwner : '—'),
+          _detailKeyVal(
+            'Fingerprint',
+            isLoaded && meta.fingerprint != '---'
+                ? (meta.fingerprint.length > 12 ? '${meta.fingerprint.substring(0, 12)}...' : meta.fingerprint)
+                : '—',
+            isMono: true,
+          ),
+          _detailKeyVal('Signature', isLoaded && meta.memeSignature.isNotEmpty ? meta.memeSignature : '—'),
+          _detailKeyVal('Receiver lock', lockText, valueColor: lockColor),
+          if (!Platform.isAndroid && !Platform.isIOS)
+            _detailKeyVal('Printing', printText, valueColor: printColor),
+          _detailKeyVal('Opened at', isLoaded && _openTimestamp != null ? DateFormat('HH:mm:ss').format(_openTimestamp!) : '—'),
+          _detailKeyVal('Session', isLoaded ? _formatDuration(_activeReadingDuration) : '—'),
+          _detailKeyVal('Cloud audit', isLoaded ? 'Synced' : '—', valueColor: AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen),
+
+          if (isLoaded) ...[
+            const SizedBox(height: 16),
+            Divider(color: AppTheme.borderGlass),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: AppTheme.secondaryBtnBg,
+                foregroundColor: AppTheme.fgLight,
+                side: BorderSide(color: AppTheme.secondaryBtnBorder),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                minimumSize: const Size(double.infinity, 36),
+              ),
+              icon: const Icon(Icons.analytics_outlined, size: 14),
+              label: const Text('Audit trail', style: TextStyle(fontSize: 12)),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SnailTrailScreen(
+                      logs: meta.trailLogs,
+                      fileFingerprint: meta.fingerprint,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            if (meta.allowPrint && !Platform.isAndroid && !Platform.isIOS) ...[
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppTheme.secondaryBtnBg,
+                  foregroundColor: AppTheme.fgLight,
+                  side: BorderSide(color: AppTheme.secondaryBtnBorder),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  minimumSize: const Size(double.infinity, 36),
+                ),
+                icon: const Icon(Icons.print_rounded, size: 14),
+                label: const Text('Secure print', style: TextStyle(fontSize: 12)),
+                onPressed: _handleSecurePrint,
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                backgroundColor: AppTheme.secondaryBtnBg,
+                foregroundColor: Colors.redAccent,
+                side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.3)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                minimumSize: const Size(double.infinity, 36),
+              ),
+              icon: const Icon(Icons.close_rounded, size: 14),
+              label: const Text('Close file', style: TextStyle(fontSize: 12)),
+              onPressed: _closeFile,
+            ),
+          ],
+
+          const Spacer(),
+
+          // Privacy & legal terms link
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                'Privacy & legal terms',
+                style: TextStyle(
+                  color: AppTheme.fgMuted,
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailKeyVal(String key, String val, {Color? valueColor, bool isMono = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            key,
+            style: TextStyle(
+              color: AppTheme.fgMuted,
+              fontSize: 12.5,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              val,
+              style: TextStyle(
+                color: valueColor ?? AppTheme.fgLight,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+                fontFamily: isMono ? 'monospace' : null,
+              ),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -1554,9 +1840,10 @@ class ReaderConsoleState extends State<ReaderConsole> {
                   // Strictly disable text selection and context menu copying
                   enableTextSelection: false,
                   canShowTextSelectionMenu: false,
-                  canShowPaginationDialog: false,
-                  canShowScrollHead: false,
-                  canShowScrollStatus: false,
+                  canShowPaginationDialog: true,
+                  canShowScrollHead: true,
+                  canShowScrollStatus: true,
+                  scrollDirection: PdfScrollDirection.vertical,
                   pageSpacing: 8,
                   maxZoomLevel: 10.0,
                   onDocumentLoaded: (details) {

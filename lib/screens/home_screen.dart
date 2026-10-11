@@ -1,14 +1,18 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/file_intent_service.dart';
+import '../services/security_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/account_profile_dialog.dart';
+import '../widgets/shared_widgets.dart';
 import 'reader_console.dart';
 import 'packer_console.dart';
 import 'global_auth_screen.dart';
@@ -37,10 +41,30 @@ class _HomeViewState extends State<_HomeView> {
   // Key lets us call openFileFromPath on the reader
   final GlobalKey<ReaderConsoleState> _readerKey = GlobalKey();
   bool _isDragging = false;
+  bool _isUsbDebuggingActive = false;
+  late final AppLifecycleListener _homeLifecycleListener;
+
+  Future<void> _checkUsbDebugging() async {
+    if (!Platform.isAndroid) return;
+    final isEnabled = await SecurityService.isUsbDebuggingEnabled();
+    if (mounted && isEnabled != _isUsbDebuggingActive) {
+      setState(() => _isUsbDebuggingActive = isEnabled);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _homeLifecycleListener = AppLifecycleListener(
+      onResume: _checkUsbDebugging,
+      onExitRequested: () async {
+        if (_readerKey.currentState != null) {
+          await _readerKey.currentState?.writeCloseTrailLog();
+        }
+        return AppExitResponse.exit;
+      },
+    );
+    _checkUsbDebugging();
     _fileSub = FileIntentService.onFileReceived.listen(_onIncomingFile);
     final pending = FileIntentService.consumePendingInitialFile();
     if (pending != null) {
@@ -52,6 +76,7 @@ class _HomeViewState extends State<_HomeView> {
 
   @override
   void dispose() {
+    _homeLifecycleListener.dispose();
     _fileSub?.cancel();
     super.dispose();
   }
@@ -101,6 +126,39 @@ class _HomeViewState extends State<_HomeView> {
     }
   }
 
+  Widget _buildUsbDebuggingBanner() {
+    if (!_isUsbDebuggingActive) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      color: Colors.redAccent.withValues(alpha: 0.92),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.usb_off_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'SECURITY WARNING: USB Debugging is active on this device. Container opening is restricted.',
+              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.black.withValues(alpha: 0.35),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => SecurityService.openDeveloperSettings(),
+            child: const Text('SETTINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 720;
@@ -115,18 +173,40 @@ class _HomeViewState extends State<_HomeView> {
           if (isWide)
             Scaffold(
               backgroundColor: AppTheme.bgMain,
-              body: Row(
+              body: Column(
                 children: [
-                  const AppSidebar(),
+                  _buildUsbDebuggingBanner(),
                   Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      child: state.currentView == AppView.reader
-                          ? ReaderConsole(key: _readerKey)
-                          : PackerConsole(
-                              key: const ValueKey('packer'),
-                              onOpenInReader: _onIncomingFile,
-                            ),
+                    child: Row(
+                      children: [
+                        const AppSidebar(),
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            child: () {
+                              switch (state.currentView) {
+                                case AppView.reader:
+                                  return ReaderConsole(key: _readerKey);
+                                case AppView.packer:
+                                  return PackerConsole(
+                                    key: const ValueKey('packer'),
+                                    onOpenInReader: _onIncomingFile,
+                                  );
+                                case AppView.trackedFiles:
+                                  return const ComposerAuditScreen(
+                                    key: ValueKey('trackedFiles'),
+                                    isEmbedded: true,
+                                  );
+                                case AppView.alerts:
+                                  return const PiracyAlertsScreen(
+                                    key: ValueKey('alerts'),
+                                    isEmbedded: true,
+                                  );
+                              }
+                            }(),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -139,17 +219,27 @@ class _HomeViewState extends State<_HomeView> {
                 backgroundColor: AppTheme.bgGlassSidebar,
                 elevation: 0,
                 titleSpacing: 16,
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                title: Row(
                   children: [
-                    Text('GDRM ECOSYSTEM',
-                        style: TextStyle(
-                            color: AppTheme.fgLight,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1)),
-                    Text('Custom Digital Right Manager',
-                        style: TextStyle(color: AppTheme.fgMuted, fontSize: 10)),
+                    const GdrmVLogoBadge(size: 28, showGlow: false),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('GDRM V',
+                            style: TextStyle(
+                                color: AppTheme.fgLight,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8)),
+                        const Text('THE MILKY WAY UPDATE',
+                            style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5)),
+                      ],
+                    ),
                   ],
                 ),
                 actions: [
@@ -300,14 +390,36 @@ class _HomeViewState extends State<_HomeView> {
                 ],
               ),
               endDrawer: const _ManifestDrawer(),
-              body: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: state.currentView == AppView.reader
-                    ? ReaderConsole(key: _readerKey)
-                    : PackerConsole(
-                        key: const ValueKey('packer'),
-                        onOpenInReader: _onIncomingFile,
-                      ),
+              body: Column(
+                children: [
+                  _buildUsbDebuggingBanner(),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: () {
+                        switch (state.currentView) {
+                          case AppView.reader:
+                            return ReaderConsole(key: _readerKey);
+                          case AppView.packer:
+                            return PackerConsole(
+                              key: const ValueKey('packer'),
+                              onOpenInReader: _onIncomingFile,
+                            );
+                          case AppView.trackedFiles:
+                            return const ComposerAuditScreen(
+                              key: ValueKey('trackedFiles'),
+                              isEmbedded: true,
+                            );
+                          case AppView.alerts:
+                            return const PiracyAlertsScreen(
+                              key: ValueKey('alerts'),
+                              isEmbedded: true,
+                            );
+                        }
+                      }(),
+                    ),
+                  ),
+                ],
               ),
               bottomNavigationBar: Container(
                 decoration: BoxDecoration(
@@ -317,21 +429,39 @@ class _HomeViewState extends State<_HomeView> {
                 child: BottomNavigationBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  selectedItemColor: AppTheme.colorCyan,
+                  type: BottomNavigationBarType.fixed,
+                  selectedItemColor: AppTheme.primaryGreen,
                   unselectedItemColor: AppTheme.fgMuted,
-                  currentIndex: state.currentView == AppView.reader ? 0 : 1,
-                  onTap: (i) =>
-                      state.switchView(i == 0 ? AppView.reader : AppView.packer),
-                  items: const [
-                    BottomNavigationBarItem(
+                  currentIndex: state.currentView.index,
+                  onTap: (i) => state.switchView(AppView.values[i]),
+                  items: [
+                    const BottomNavigationBarItem(
                       icon: Icon(Icons.menu_book_outlined),
                       activeIcon: Icon(Icons.menu_book),
                       label: 'Reader',
                     ),
-                    BottomNavigationBarItem(
+                    const BottomNavigationBarItem(
                       icon: Icon(Icons.inventory_2_outlined),
                       activeIcon: Icon(Icons.inventory_2),
                       label: 'Packer',
+                    ),
+                    const BottomNavigationBarItem(
+                      icon: Icon(Icons.hub_outlined),
+                      activeIcon: Icon(Icons.hub),
+                      label: 'Tracked',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Badge(
+                        isLabelVisible: state.unreadPiracyAlertsCount > 0,
+                        label: Text('${state.unreadPiracyAlertsCount}'),
+                        child: const Icon(Icons.notifications_none_rounded),
+                      ),
+                      activeIcon: Badge(
+                        isLabelVisible: state.unreadPiracyAlertsCount > 0,
+                        label: Text('${state.unreadPiracyAlertsCount}'),
+                        child: const Icon(Icons.notifications_rounded),
+                      ),
+                      label: 'Alerts',
                     ),
                   ],
                 ),

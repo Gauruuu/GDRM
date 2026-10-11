@@ -11,7 +11,7 @@ import '../services/smtp_email_service.dart';
 
 import '../theme/app_theme.dart';
 
-enum AppView { reader, packer }
+enum AppView { reader, packer, trackedFiles, alerts }
 
 class AppState extends ChangeNotifier {
   AppState() {
@@ -46,6 +46,10 @@ class AppState extends ChangeNotifier {
   String? cloudDisplayName;
   String? cloudEmail;
   String? cloudUid;
+  String? cloudPhone;
+  String? cloudCountry;
+  String? cloudState;
+  String? cloudCity;
   bool isAuthLoading = false;
 
   bool get isCloudAuthenticated => cloudUsername != null;
@@ -120,6 +124,10 @@ class AppState extends ChangeNotifier {
               cloudUsername = data['username'] as String?;
               cloudDisplayName = (data['name'] as String?) ?? user.displayName ?? '';
               cloudEmail = (data['email'] as String?) ?? user.email;
+              cloudPhone = data['phone'] as String?;
+              cloudCountry = data['country'] as String?;
+              cloudState = data['state'] as String?;
+              cloudCity = data['city'] as String?;
               if (data['isEmailVerified'] == true) {
                 isEmailVerified = true;
               }
@@ -129,6 +137,10 @@ class AppState extends ChangeNotifier {
               notifyListeners();
             } else if (user.email != null) {
               cloudUsername = user.email!.split('@').first;
+              cloudPhone = null;
+              cloudCountry = null;
+              cloudState = null;
+              cloudCity = null;
               _initPiracyAlertListener(cloudUsername!);
               notifyListeners();
             }
@@ -148,6 +160,10 @@ class AppState extends ChangeNotifier {
         cloudDisplayName = null;
         cloudEmail = null;
         cloudUid = null;
+        cloudPhone = null;
+        cloudCountry = null;
+        cloudState = null;
+        cloudCity = null;
         isEmailVerified = false;
         _piracySub?.cancel();
         _piracySub = null;
@@ -195,8 +211,16 @@ class AppState extends ChangeNotifier {
               final data = query.docs.first.data();
               cloudUsername = data['username'] as String?;
               cloudDisplayName = (data['name'] as String?) ?? credential.user!.displayName ?? '';
+              cloudPhone = data['phone'] as String?;
+              cloudCountry = data['country'] as String?;
+              cloudState = data['state'] as String?;
+              cloudCity = data['city'] as String?;
             } else {
               cloudUsername = cleanIdentifier.split('@').first;
+              cloudPhone = null;
+              cloudCountry = null;
+              cloudState = null;
+              cloudCity = null;
             }
           } catch (_) {
             cloudUsername = cleanIdentifier.split('@').first;
@@ -223,6 +247,10 @@ class AppState extends ChangeNotifier {
             resolvedEmail = (data['email'] as String?) ?? '';
             resolvedUsername = cleanIdentifier;
             resolvedDisplayName = (data['name'] as String?) ?? '';
+            cloudPhone = data['phone'] as String?;
+            cloudCountry = data['country'] as String?;
+            cloudState = data['state'] as String?;
+            cloudCity = data['city'] as String?;
           }
         } catch (e) {
           debugPrint('[Login] Firestore username lookup notice: $e');
@@ -279,36 +307,92 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  /// Provision an account with Name, Username, Email, and Password
+  /// Pre-check uniqueness of username and phone number before proceeding with OTP
+  Future<String?> checkRegistrationPreconditions({
+    required String username,
+    required String email,
+    required String phone,
+  }) async {
+    try {
+      final cleanUsername = username.trim().toLowerCase();
+      final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '').trim();
+
+      // 1. Check Username handle in Firestore
+      final userCheck = await FirebaseFirestore.instance
+          .collection('gdrm_users')
+          .doc(cleanUsername)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      if (userCheck.exists) {
+        return 'USERNAME_TAKEN';
+      }
+
+      // 2. Check dedicated gdrm_phones unique index
+      final phoneCheck = await FirebaseFirestore.instance
+          .collection('gdrm_phones')
+          .doc(cleanPhone)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      if (phoneCheck.exists) {
+        return 'PHONE_TAKEN';
+      }
+
+      // 3. Check gdrm_users collection for existing phone number
+      final phoneQuery = await FirebaseFirestore.instance
+          .collection('gdrm_users')
+          .where('phone', isEqualTo: cleanPhone)
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      if (phoneQuery.docs.isNotEmpty) {
+        return 'PHONE_TAKEN';
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('[Registration Pre-Check] Firestore lookup notice: $e');
+      return null;
+    }
+  }
+
+  /// Provision an account with Name, Username, Email, Password, Phone, Country, State, City
   Future<String> registerOnCloud({
     required String name,
     required String username,
     required String email,
     required String password,
+    required String phone,
+    required String country,
+    required String state,
+    required String city,
   }) async {
     try {
       final cleanName = name.trim();
       final cleanUsername = username.trim().toLowerCase();
       final cleanEmail = email.trim().toLowerCase();
+      final cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '').trim();
 
       // Validate username handle format (letters, numbers, underscore only)
       if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(cleanUsername)) {
         return 'INVALID_USERNAME_FORMAT';
       }
 
-      // 1. Check if Username handle is taken in Firestore (with fast 3s timeout)
-      try {
-        final userCheck = await FirebaseFirestore.instance
-            .collection('gdrm_users')
-            .doc(cleanUsername)
-            .get()
-            .timeout(const Duration(seconds: 3));
+      // Validate phone format
+      if (cleanPhone.length < 7 || cleanPhone.length > 17) {
+        return 'INVALID_PHONE_FORMAT';
+      }
 
-        if (userCheck.exists) {
-          return 'USERNAME_TAKEN';
-        }
-      } catch (e) {
-        debugPrint('[Registration Pre-Check] Firestore lookup notice (continuing): $e');
+      // 1. Verify preconditions (Username and Phone Uniqueness)
+      final preCheck = await checkRegistrationPreconditions(
+        username: cleanUsername,
+        email: cleanEmail,
+        phone: cleanPhone,
+      );
+      if (preCheck != null) {
+        return preCheck;
       }
 
       // 2. Create native Firebase Auth Identity
@@ -331,7 +415,22 @@ class AppState extends ChangeNotifier {
         await credential.user!.updateDisplayName(cleanName);
       } catch (_) {}
 
-      // 3. Save profile document in Firestore `gdrm_users/{cleanUsername}`
+      // 3. Reserve phone number atomically in gdrm_phones/{cleanPhone}
+      try {
+        await FirebaseFirestore.instance
+            .collection('gdrm_phones')
+            .doc(cleanPhone)
+            .set({
+          'phone': cleanPhone,
+          'username': cleanUsername,
+          'uid': credential.user!.uid,
+          'registeredAt': FieldValue.serverTimestamp(),
+        }).timeout(const Duration(seconds: 4));
+      } catch (e) {
+        debugPrint('[Registration] Warning saving gdrm_phones unique index: $e');
+      }
+
+      // 4. Save profile document in Firestore `gdrm_users/{cleanUsername}`
       try {
         await FirebaseFirestore.instance
             .collection('gdrm_users')
@@ -340,6 +439,10 @@ class AppState extends ChangeNotifier {
           'name': cleanName,
           'username': cleanUsername,
           'email': cleanEmail,
+          'phone': cleanPhone,
+          'country': country.trim(),
+          'state': state.trim(),
+          'city': city.trim(),
           'uid': credential.user!.uid,
           'isEmailVerified': true,
           'emailVerifiedAt': FieldValue.serverTimestamp(),
@@ -352,6 +455,10 @@ class AppState extends ChangeNotifier {
       cloudUsername = cleanUsername;
       cloudDisplayName = cleanName;
       cloudEmail = cleanEmail;
+      cloudPhone = cleanPhone;
+      cloudCountry = country.trim();
+      cloudState = state.trim();
+      cloudCity = city.trim();
       cloudUid = credential.user!.uid;
       isEmailVerified = true;
 
@@ -571,9 +678,23 @@ class AppState extends ChangeNotifier {
           await FirebaseFirestore.instance
               .collection('gdrm_users')
               .doc(cloudUsername)
-              .delete();
+              .delete()
+              .timeout(const Duration(seconds: 4));
         } catch (e) {
           debugPrint('[AppState] Error deleting Firestore user doc: $e');
+        }
+      }
+
+      // Delete phone mapping from gdrm_phones
+      if (cloudPhone != null && cloudPhone!.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('gdrm_phones')
+              .doc(cloudPhone)
+              .delete()
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('[AppState] Error deleting gdrm_phones doc: $e');
         }
       }
 
@@ -581,7 +702,7 @@ class AppState extends ChangeNotifier {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         try {
-          await user.delete();
+          await user.delete().timeout(const Duration(seconds: 4));
         } catch (e) {
           debugPrint('[AppState] Firebase Auth user delete notice: $e');
         }
@@ -589,22 +710,174 @@ class AppState extends ChangeNotifier {
 
       _pendingDeleteOtp = null;
       _deleteOtpExpiry = null;
-      logoutCloud();
+      await logoutCloud();
       return 'SUCCESS';
     } catch (e) {
       return 'Error deleting account: $e';
     }
   }
 
-  void logoutCloud() async {
+  /// Permanently deletes the current account from Firestore, releases phone reservation, deletes from Firebase Auth, and clears local state.
+  Future<String> deleteAccountDirectly() async {
+    try {
+      final usernameToDelete = cloudUsername;
+      final phoneToDelete = cloudPhone;
+
+      // 1. Delete user record in Firestore gdrm_users
+      if (usernameToDelete != null && usernameToDelete.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('gdrm_users')
+              .doc(usernameToDelete)
+              .delete()
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('[AppState] Error deleting Firestore user doc: $e');
+        }
+      }
+
+      // 2. Delete phone reservation in gdrm_phones so phone number is free to register again
+      if (phoneToDelete != null && phoneToDelete.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('gdrm_phones')
+              .doc(phoneToDelete)
+              .delete()
+              .timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('[AppState] Error deleting gdrm_phones doc: $e');
+        }
+      }
+
+      // 3. Delete Firebase Auth user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          await user.delete().timeout(const Duration(seconds: 4));
+        } catch (e) {
+          debugPrint('[AppState] Firebase Auth user delete notice: $e');
+        }
+      }
+
+      await logoutCloud();
+      return 'SUCCESS';
+    } catch (e) {
+      debugPrint('[AppState] Error deleting account: $e');
+      await logoutCloud();
+      return 'SUCCESS';
+    }
+  }
+
+  /// Completely wipes all data across Firebase Firestore collections:
+  /// - gdrm_users (all registered user identities)
+  /// - gdrm_phones (all registered unique phone reservations)
+  /// - gdrm_piracy_alerts (all security and piracy alerts)
+  /// - gdrm_snail_trails (all audit trails, and their 'events' subcollections)
+  /// Also deletes the current authenticated Firebase user identity and signs out,
+  /// giving a 100% clean, fresh slate.
+  Future<String> clearEntireFirebaseDatabase() async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      // 1. Wipe gdrm_users
+      try {
+        final usersSnap = await firestore.collection('gdrm_users').get().timeout(const Duration(seconds: 8));
+        for (final doc in usersSnap.docs) {
+          try {
+            await doc.reference.delete();
+          } catch (e) {
+            debugPrint('[AppState] Failed deleting user doc ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('[AppState] Error querying gdrm_users for purge: $e');
+      }
+
+      // 2. Wipe gdrm_phones
+      try {
+        final phonesSnap = await firestore.collection('gdrm_phones').get().timeout(const Duration(seconds: 8));
+        for (final doc in phonesSnap.docs) {
+          try {
+            await doc.reference.delete();
+          } catch (e) {
+            debugPrint('[AppState] Failed deleting phone doc ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('[AppState] Error querying gdrm_phones for purge: $e');
+      }
+
+      // 3. Wipe gdrm_piracy_alerts
+      try {
+        final alertsSnap = await firestore.collection('gdrm_piracy_alerts').get().timeout(const Duration(seconds: 8));
+        for (final doc in alertsSnap.docs) {
+          try {
+            await doc.reference.delete();
+          } catch (e) {
+            debugPrint('[AppState] Failed deleting alert doc ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('[AppState] Error querying gdrm_piracy_alerts for purge: $e');
+      }
+
+      // 4. Wipe gdrm_snail_trails and events subcollections
+      try {
+        final trailsSnap = await firestore.collection('gdrm_snail_trails').get().timeout(const Duration(seconds: 8));
+        for (final doc in trailsSnap.docs) {
+          try {
+            final eventsSnap = await doc.reference.collection('events').get().timeout(const Duration(seconds: 6));
+            for (final ev in eventsSnap.docs) {
+              try {
+                await ev.reference.delete();
+              } catch (_) {}
+            }
+            await doc.reference.delete();
+          } catch (e) {
+            debugPrint('[AppState] Failed deleting trail doc ${doc.id}: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('[AppState] Error querying gdrm_snail_trails for purge: $e');
+      }
+
+      // 5. Delete current auth user
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          await user.delete().timeout(const Duration(seconds: 5));
+        } catch (e) {
+          debugPrint('[AppState] Notice deleting current user during purge: $e');
+        }
+      }
+
+      // 6. Reset all local state
+      await logoutCloud();
+      return 'SUCCESS';
+    } catch (e) {
+      debugPrint('[AppState] Error clearing Firebase database: $e');
+      await logoutCloud();
+      return 'Error: $e';
+    }
+  }
+
+  Future<void> logoutCloud() async {
     try {
       await FirebaseAuth.instance.signOut();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[AppState] Error during signOut: $e');
+    }
     cloudUsername = null;
     cloudDisplayName = null;
     cloudEmail = null;
     cloudUid = null;
+    cloudPhone = null;
+    cloudCountry = null;
+    cloudState = null;
+    cloudCity = null;
+    isEmailVerified = false;
     _piracySub?.cancel();
+    _piracySub = null;
     activePiracyAlerts = [];
     unreadPiracyAlertsCount = 0;
     notifyListeners();

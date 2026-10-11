@@ -14,7 +14,6 @@ import '../services/device_key_service.dart';
 import '../services/piracy_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/shared_widgets.dart';
 
 class PackerConsole extends StatefulWidget {
   final void Function(String path)? onOpenInReader;
@@ -25,15 +24,20 @@ class PackerConsole extends StatefulWidget {
   State<PackerConsole> createState() => _PackerConsoleState();
 }
 
+enum PackerAccessMode {
+  specificUser,
+  membersOnly,
+  openPublic,
+}
+
 class _PackerConsoleState extends State<PackerConsole> {
   final _licensedToCtrl = TextEditingController();
   final _copyrightCtrl = TextEditingController();
   final _memeCtrl = TextEditingController(text: 'SECURE_SIGNATURE_v1');
   
-  // Recipient Username Lock & Members Only Lock
+  // Recipient Access Control: Specific User, Any Member, or Public/Open
+  PackerAccessMode _accessMode = PackerAccessMode.specificUser;
   final _targetUserCtrl = TextEditingController();
-  bool _cloudLockEnabled = true;
-  bool _membersOnly = false;
   bool _isCheckingUser = false;
   String? _userVerifyStatus;
   Color _userVerifyColor = AppTheme.fgMuted;
@@ -57,9 +61,7 @@ class _PackerConsoleState extends State<PackerConsole> {
   // Physical Printing Permission
   bool _allowPrint = true;
 
-  String? _lastFingerprint;
-  String? _lastOutputPath;
-  bool _success = false;
+
 
   @override
   void initState() {
@@ -204,7 +206,7 @@ class _PackerConsoleState extends State<PackerConsole> {
       return;
     }
 
-    if (_cloudLockEnabled && targetUser.isEmpty) {
+    if (_accessMode == PackerAccessMode.specificUser && targetUser.isEmpty) {
       _showDialog('Recipient Required', 'Please enter the receiver\'s username to lock the .gdrm file for them.', isError: true);
       return;
     }
@@ -221,8 +223,8 @@ class _PackerConsoleState extends State<PackerConsole> {
 
     final state = context.read<AppState>();
 
-    // Verify recipient in Firestore if cloud lock is enabled
-    if (_cloudLockEnabled && targetUser.isNotEmpty) {
+    // Verify recipient in Firestore if specific username lock is enabled
+    if (_accessMode == PackerAccessMode.specificUser && targetUser.isNotEmpty) {
       state.setPackerWorking(true);
       try {
         final lookup = await FirebaseFirestore.instance
@@ -297,11 +299,11 @@ class _PackerConsoleState extends State<PackerConsole> {
         senderDeviceKey: deviceKey,
         password: _fileRipEnabled ? _passwordCtrl.text.trim() : '',
         maxAttempts: _fileRipEnabled ? (int.tryParse(_maxAttemptsCtrl.text.trim()) ?? 3) : 0,
-        targetUsername: _cloudLockEnabled ? targetUser : '',
+        targetUsername: _accessMode == PackerAccessMode.specificUser ? targetUser : '',
         riggedExpiry: computedExpiry,
         maxOpens: _riggedOpenEnabled ? (int.tryParse(_maxOpensCtrl.text.trim()) ?? 5) : 0,
         allowPrint: _allowPrint,
-        membersOnly: _membersOnly,
+        membersOnly: _accessMode == PackerAccessMode.membersOnly,
       );
 
       // Save initial container to documents/temporary directory
@@ -328,12 +330,6 @@ class _PackerConsoleState extends State<PackerConsole> {
         senderUsername: senderUser,
         activeUsername: senderUser,
       );
-
-      setState(() {
-        _lastFingerprint = parsed.metadata.fingerprint;
-        _lastOutputPath = initialOutputPath;
-        _success = true;
-      });
 
       state.setPackerWorking(false);
 
@@ -440,7 +436,15 @@ class _PackerConsoleState extends State<PackerConsole> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _summaryRow('Recipient Lock', _cloudLockEnabled && _targetUserCtrl.text.isNotEmpty ? '@${_targetUserCtrl.text.trim()}' : 'Public / Unbound', _cloudLockEnabled && _targetUserCtrl.text.isNotEmpty ? AppTheme.colorCyan : AppTheme.colorAmber),
+                          _summaryRow(
+                            'Recipient Lock',
+                            _accessMode == PackerAccessMode.specificUser && _targetUserCtrl.text.isNotEmpty
+                                ? '@${_targetUserCtrl.text.trim()}'
+                                : (_accessMode == PackerAccessMode.membersOnly ? 'Registered members' : 'Public / Unbound'),
+                            _accessMode == PackerAccessMode.openPublic
+                                ? AppTheme.colorAmber
+                                : (AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen),
+                          ),
                           _summaryRow('Fingerprint', parsed.metadata.fingerprint.length > 16 ? '${parsed.metadata.fingerprint.substring(0, 16)}...' : parsed.metadata.fingerprint, AppTheme.colorAmber, isMono: true),
                           _summaryRow('File Size', '${(packedBytes.lengthInBytes / 1024).toStringAsFixed(1)} KB', AppTheme.fgLight),
                           if (_chronoLockEnabled && _openAt != null)
@@ -521,9 +525,6 @@ class _PackerConsoleState extends State<PackerConsole> {
                                   setModalState(() {
                                     currentSavedPath = selectedPath;
                                   });
-                                  setState(() {
-                                    _lastOutputPath = selectedPath;
-                                  });
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -576,9 +577,9 @@ class _PackerConsoleState extends State<PackerConsole> {
                             ),
                             onPressed: () async {
                               try {
-                                final recipient = _cloudLockEnabled && _targetUserCtrl.text.isNotEmpty
+                                final recipient = _accessMode == PackerAccessMode.specificUser && _targetUserCtrl.text.isNotEmpty
                                     ? '@${_targetUserCtrl.text.trim()}'
-                                    : 'Public';
+                                    : (_accessMode == PackerAccessMode.membersOnly ? 'Registered members' : 'Public');
                                 await Share.shareXFiles(
                                   [
                                     XFile(
@@ -663,352 +664,223 @@ class _PackerConsoleState extends State<PackerConsole> {
     );
   }
 
-  Widget _recipientLockSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgGlassPanel,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: (_cloudLockEnabled || _membersOnly) ? AppTheme.colorCyan.withValues(alpha: 0.6) : AppTheme.borderGlass,
-          width: (_cloudLockEnabled || _membersOnly) ? 1.5 : 1.0,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Specific Username Lock
-          Row(
-            children: [
-              Icon(
-                Icons.lock_person_rounded,
-                size: 18,
-                color: _cloudLockEnabled ? AppTheme.colorCyan : AppTheme.fgMuted,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'SPECIFIC RECIPIENT USERNAME LOCK',
-                  style: TextStyle(
-                    color: AppTheme.fgLight,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              Switch(
-                value: _cloudLockEnabled,
-                activeColor: AppTheme.colorCyan,
-                onChanged: (v) => setState(() {
-                  _cloudLockEnabled = v;
-                  if (v) _membersOnly = false;
-                }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Strict 1-to-1 lock: Only the user with this registered username handle can decrypt and view this document.',
-            style: TextStyle(color: AppTheme.fgMuted, fontSize: 10.5),
-          ),
-          if (_cloudLockEnabled) ...[
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: LabeledTextField(
-                    label: 'Receiver Preferred Username',
-                    controller: _targetUserCtrl,
-                    hint: 'e.g. gaurav (without @)',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Padding(
-                  padding: const EdgeInsets.only(top: 24),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.bgGlassSidebar,
-                      foregroundColor: AppTheme.colorCyan,
-                      side: BorderSide(color: AppTheme.colorCyan),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    onPressed: _isCheckingUser ? null : _verifyTargetUser,
-                    child: _isCheckingUser
-                        ? SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.colorCyan),
-                          )
-                        : const Text('Verify User', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-            if (_userVerifyStatus != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                _userVerifyStatus!,
-                style: TextStyle(
-                  color: _userVerifyColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ],
 
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Divider(color: AppTheme.borderGlass),
-          ),
-
-          // 2. GDRM Members Only Lock
-          Row(
-            children: [
-              Icon(
-                Icons.groups_rounded,
-                size: 18,
-                color: _membersOnly ? Colors.greenAccent : AppTheme.fgMuted,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'ANY GDRM MEMBER (ACCOUNT REQUIRED)',
-                  style: TextStyle(
-                    color: AppTheme.fgLight,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              Switch(
-                value: _membersOnly,
-                activeColor: Colors.greenAccent,
-                onChanged: (v) => setState(() {
-                  _membersOnly = v;
-                  if (v) _cloudLockEnabled = false;
-                }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Allows any user with a registered GDRM Ecosystem account to access and decrypt the file, regardless of their specific username handle.',
-            style: TextStyle(
-              color: _membersOnly ? Colors.greenAccent : AppTheme.fgMuted,
-              fontSize: 10.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _riggedFileSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgGlassPanel,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: (_riggedTimeEnabled || _riggedOpenEnabled) ? AppTheme.colorMagenta.withValues(alpha: 0.5) : AppTheme.borderGlass),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.gavel_rounded, size: 16, color: (_riggedTimeEnabled || _riggedOpenEnabled) ? AppTheme.colorMagenta : AppTheme.fgMuted),
-              const SizedBox(width: 8),
-              Expanded(child: Text('RIGGEDFILE COUNTER & TIMERS', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Switch(value: _riggedTimeEnabled, activeColor: AppTheme.colorMagenta, onChanged: (v) => setState(() => _riggedTimeEnabled = v)),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Enable Lifespan Time-Bomb (Melt)', style: TextStyle(color: AppTheme.fgLight, fontSize: 12))),
-            ],
-          ),
-          if (_riggedTimeEnabled) ...[
-            Row(
-              children: [
-                Expanded(child: LabeledTextField(label: 'Lifespan Duration Amount', controller: _riggedDurationCtrl, hint: 'e.g. 30')),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 14),
-                    Text('TIME UNIT', style: TextStyle(color: AppTheme.fgMuted, fontSize: 10, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    DropdownButton<String>(
-                      value: _durationUnit,
-                      dropdownColor: AppTheme.bgGlassSidebar,
-                      style: TextStyle(color: AppTheme.colorCyan, fontSize: 13, fontWeight: FontWeight.bold),
-                      items: ['MINUTES', 'HOURS', 'DAYS'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                      onChanged: (v) => setState(() => _durationUnit = v ?? 'MINUTES'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-          Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Divider(color: AppTheme.borderGlass)),
-          Row(
-            children: [
-              Switch(value: _riggedOpenEnabled, activeColor: AppTheme.colorMagenta, onChanged: (v) => setState(() => _riggedOpenEnabled = v)),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Enable Max File Opening Ceiling Limit', style: TextStyle(color: AppTheme.fgLight, fontSize: 12))),
-            ],
-          ),
-          if (_riggedOpenEnabled) ...[
-            LabeledTextField(label: 'Max Opening Allowance Threshold', controller: _maxOpensCtrl, hint: 'e.g. 5'),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _fileRipSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgGlassPanel,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _fileRipEnabled ? AppTheme.colorMagenta.withValues(alpha: 0.5) : AppTheme.borderGlass),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.gpp_maybe_rounded, size: 16, color: _fileRipEnabled ? AppTheme.colorMagenta : AppTheme.fgMuted),
-              const SizedBox(width: 8),
-              Expanded(child: Text('FILERIP PASSWORD LAYER', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
-              Switch(value: _fileRipEnabled, activeColor: AppTheme.colorMagenta, onChanged: (v) => setState(() => _fileRipEnabled = v)),
-            ],
-          ),
-          if (_fileRipEnabled) ...[
-            LabeledTextField(label: 'Security Verification Password', controller: _passwordCtrl, hint: 'Unlock password'),
-            LabeledTextField(label: 'Max Failure Entry Attempt Limit', controller: _maxAttemptsCtrl, hint: 'e.g. 3'),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _chronoLockSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgGlassPanel,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _chronoLockEnabled ? AppTheme.colorAmber.withValues(alpha: 0.5) : AppTheme.borderGlass),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lock_clock_rounded, size: 16, color: _chronoLockEnabled ? AppTheme.colorAmber : AppTheme.fgMuted),
-              const SizedBox(width: 8),
-              Expanded(child: Text('CHRONOLOCK', style: TextStyle(color: AppTheme.fgLight, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8))),
-              Switch(value: _chronoLockEnabled, activeColor: AppTheme.colorAmber, onChanged: (v) => setState(() => _chronoLockEnabled = v)),
-            ],
-          ),
-          if (_chronoLockEnabled) ...[
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: _pickOpenAt,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(color: AppTheme.bgMain, borderRadius: BorderRadius.circular(4), border: Border.all(color: AppTheme.borderGlass)),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 13, color: AppTheme.colorAmber),
-                    const SizedBox(width: 8),
-                    Text(_openAt == null ? 'Set unlock date & time' : _formatOpenAt(_openAt!), style: TextStyle(color: _openAt == null ? AppTheme.fgMuted : AppTheme.colorAmber, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _printPermissionSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgGlassPanel,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: _allowPrint ? AppTheme.colorCyan.withValues(alpha: 0.5) : Colors.redAccent.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                _allowPrint ? Icons.print_rounded : Icons.print_disabled_rounded,
-                size: 16,
-                color: _allowPrint ? AppTheme.colorCyan : Colors.redAccent,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'PHYSICAL PRINTING PERMISSION',
-                  style: TextStyle(
-                    color: AppTheme.fgLight,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ),
-              Switch(
-                value: _allowPrint,
-                activeColor: AppTheme.colorCyan,
-                inactiveThumbColor: Colors.redAccent,
-                inactiveTrackColor: Colors.redAccent.withValues(alpha: 0.3),
-                onChanged: (v) => setState(() => _allowPrint = v),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _allowPrint
-                ? 'Authorized recipients can print watermarked examination / security copies on physical hardware printers.'
-                : 'Physical printing is strictly prohibited. The Reader console will deny all print spooling requests.',
-            style: TextStyle(
-              color: _allowPrint ? AppTheme.fgMuted : Colors.redAccent.withValues(alpha: 0.85),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showDialog(String title, String msg, {required bool isError}) {
     if (!mounted) return;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppTheme.bgGlassPanel,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: isError ? Colors.redAccent : AppTheme.colorCyan)),
         title: Text(title, style: TextStyle(color: isError ? Colors.redAccent : AppTheme.colorCyan, fontWeight: FontWeight.bold)),
         content: Text(msg, style: TextStyle(color: AppTheme.fgLight)),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('OK', style: TextStyle(color: AppTheme.colorCyan)))],
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('OK', style: TextStyle(color: AppTheme.colorCyan)))],
+      ),
+    );
+  }
+
+  Widget _labeledField({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    VoidCallback? onEditingComplete,
+    Widget? statusWidget,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: AppTheme.fgLight,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          onEditingComplete: onEditingComplete,
+          style: TextStyle(color: AppTheme.fgLight, fontSize: 13.5),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: AppTheme.fgMuted, fontSize: 13),
+            filled: true,
+            fillColor: AppTheme.bgGlassPanel,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: AppTheme.borderGlass),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: AppTheme.borderGlass),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: AppTheme.primaryGreen, width: 1.5),
+            ),
+          ),
+        ),
+        if (statusWidget != null) ...[
+          const SizedBox(height: 4),
+          statusWidget,
+        ],
+      ],
+    );
+  }
+
+  Widget _accessOptionTile({
+    required PackerAccessMode mode,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    Widget? expandedChild,
+  }) {
+    final isSelected = _accessMode == mode;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (AppTheme.isDark ? const Color(0xFF1B201E) : const Color(0xFFEDF4F0))
+              : AppTheme.bgGlassPanel,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryGreen : AppTheme.borderGlass,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                setState(() {
+                  _accessMode = mode;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      size: 18,
+                      color: isSelected ? AppTheme.primaryGreen : AppTheme.fgMuted,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(icon, size: 15, color: isSelected ? AppTheme.primaryGreen : AppTheme.fgMuted),
+                              const SizedBox(width: 6),
+                              Text(
+                                title,
+                                style: TextStyle(
+                                  color: AppTheme.fgLight,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: AppTheme.fgMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (isSelected && expandedChild != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                child: expandedChild,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _checkboxOption({
+    required bool value,
+    required String title,
+    required String subtitle,
+    required ValueChanged<bool?> onChanged,
+    Widget? expandedChild,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onChanged(!value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: value,
+                      activeColor: AppTheme.primaryGreen,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      side: BorderSide(color: AppTheme.borderGlass, width: 1.5),
+                      onChanged: onChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: AppTheme.fgLight,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: AppTheme.fgMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (value && expandedChild != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 34, top: 8),
+              child: expandedChild,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1019,41 +891,258 @@ class _PackerConsoleState extends State<PackerConsole> {
     final isWide = MediaQuery.of(context).size.width >= 720;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: isWide ? 0 : 16, vertical: isWide ? 0 : 24),
+      padding: EdgeInsets.symmetric(horizontal: isWide ? 40 : 16, vertical: 36),
       child: Center(
         child: Container(
-          width: 540,
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: AppTheme.bgGlassSidebar,
-            border: Border.all(color: AppTheme.borderGlass),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          constraints: const BoxConstraints(maxWidth: 560),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('GDRM COMPREHENSIVE PACKER', style: TextStyle(color: AppTheme.fgLight, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+              // ── Header (Page 2 & Page 5) ──
+              Text(
+                'Packer',
+                style: TextStyle(
+                  color: AppTheme.fgLight,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('Convert PDF to encrypted .gdrm container with Receiver Username Lock', style: TextStyle(color: AppTheme.fgMuted, fontSize: 11)),
-              Divider(color: AppTheme.borderGlass, height: 24),
-              
-              // ── Recipient Lock Section ──
-              _recipientLockSection(),
+              Text(
+                'Convert a PDF into a protected .gdrm file.',
+                style: TextStyle(
+                  color: AppTheme.fgMuted,
+                  fontSize: 13.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // ── Access Protection Mode Selector ──
+              Text(
+                'Access protection',
+                style: TextStyle(
+                  color: AppTheme.fgLight,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Choose who has the right to open and decrypt this document.',
+                style: TextStyle(
+                  color: AppTheme.fgMuted,
+                  fontSize: 12.5,
+                ),
+              ),
               const SizedBox(height: 14),
 
-              LabeledTextField(label: 'Licensed Target Name / Recipient Name', controller: _licensedToCtrl, hint: 'e.g. Gaurav Sharma'),
-              LabeledTextField(label: 'Legal Copyright Proprietor', controller: _copyrightCtrl, hint: 'e.g. Acme Corp / Author'),
-              LabeledTextField(label: 'Signature Override Key', controller: _memeCtrl),
-              const SizedBox(height: 14),
-              _printPermissionSection(),
-              const SizedBox(height: 14),
-              _chronoLockSection(),
-              const SizedBox(height: 14),
-              _fileRipSection(),
-              const SizedBox(height: 14),
-              _riggedFileSection(),
+              // Option 1: Specific Username Lock
+              _accessOptionTile(
+                mode: PackerAccessMode.specificUser,
+                title: 'Lock to specific username',
+                subtitle: 'Only this registered username handle can decrypt and view the document.',
+                icon: Icons.person_rounded,
+                expandedChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Divider(color: AppTheme.borderGlass, height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _targetUserCtrl,
+                            onEditingComplete: _verifyTargetUser,
+                            style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. gaurav (without @)',
+                              hintStyle: TextStyle(color: AppTheme.fgMuted, fontSize: 12.5),
+                              filled: true,
+                              fillColor: AppTheme.bgMain,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppTheme.borderGlass)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppTheme.primaryGreen, width: 1.5)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGreen,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          ),
+                          onPressed: _isCheckingUser ? null : _verifyTargetUser,
+                          child: _isCheckingUser
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Verify', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    if (_userVerifyStatus != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _userVerifyStatus!,
+                        style: TextStyle(color: _userVerifyColor, fontSize: 11.5, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Option 2: Any Registered Member
+              _accessOptionTile(
+                mode: PackerAccessMode.membersOnly,
+                title: 'Any registered GDRM member',
+                subtitle: 'Any authenticated user with an account can open. Public access blocked.',
+                icon: Icons.groups_rounded,
+              ),
+
+              // Option 3: Public / Open File
+              _accessOptionTile(
+                mode: PackerAccessMode.openPublic,
+                title: 'Public / Open file (No account)',
+                subtitle: 'No username restriction or account required. Anyone with GDRM can open.',
+                icon: Icons.public_rounded,
+              ),
+
+              const SizedBox(height: 18),
+
+              // ── Metadata Text Fields ──
+              _labeledField(
+                label: 'Recipient name',
+                controller: _licensedToCtrl,
+                hint: 'e.g. Gaurav Sharma',
+              ),
+              const SizedBox(height: 18),
+
+              _labeledField(
+                label: 'Copyright owner',
+                controller: _copyrightCtrl,
+                hint: 'Gaurang Dalal (@gauruu)',
+              ),
               const SizedBox(height: 24),
-              CyanActionButton(label: 'Select PDF & Compile .gdrm Container', onTap: _pack, isLoading: state.isPackerWorking),
+
+              _checkboxOption(
+                value: _allowPrint,
+                title: 'Allow printing',
+                subtitle: 'Recipient may print watermarked copies.',
+                onChanged: (v) => setState(() => _allowPrint = v ?? false),
+              ),
+
+              _checkboxOption(
+                value: _chronoLockEnabled,
+                title: 'ChronoLock unlock timer',
+                subtitle: 'File stays locked until a designated future date and time.',
+                onChanged: (v) => setState(() => _chronoLockEnabled = v ?? false),
+                expandedChild: GestureDetector(
+                  onTap: _pickOpenAt,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgMain,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppTheme.borderGlass),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primaryGreen),
+                        const SizedBox(width: 8),
+                        Text(
+                          _openAt == null ? 'Set unlock date & time' : _formatOpenAt(_openAt!),
+                          style: TextStyle(
+                            color: _openAt == null ? AppTheme.fgMuted : AppTheme.fgLight,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              _checkboxOption(
+                value: _riggedTimeEnabled,
+                title: 'Expiry timer',
+                subtitle: 'File becomes unreadable after a set time.',
+                onChanged: (v) => setState(() => _riggedTimeEnabled = v ?? false),
+                expandedChild: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _riggedDurationCtrl,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Duration',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    DropdownButton<String>(
+                      value: _durationUnit,
+                      dropdownColor: AppTheme.bgGlassPanel,
+                      style: TextStyle(color: AppTheme.fgLight, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      items: ['MINUTES', 'HOURS', 'DAYS'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                      onChanged: (v) => setState(() => _durationUnit = v ?? 'MINUTES'),
+                    ),
+                  ],
+                ),
+              ),
+
+              _checkboxOption(
+                value: _riggedOpenEnabled,
+                title: 'Open limit',
+                subtitle: 'Limit how many times the file can be opened.',
+                onChanged: (v) => setState(() => _riggedOpenEnabled = v ?? false),
+                expandedChild: TextField(
+                  controller: _maxOpensCtrl,
+                  keyboardType: TextInputType.number,
+                  style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Max open limit (e.g. 5)',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Action Button (Page 2 & Page 5) ──
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  minimumSize: const Size(double.infinity, 46),
+                ),
+                onPressed: state.isPackerWorking ? null : _pack,
+                child: state.isPackerWorking
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text(
+                        'Choose PDF and create .gdrm',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+              ),
             ],
           ),
         ),

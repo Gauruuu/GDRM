@@ -80,9 +80,11 @@ class PiracyService {
     String? activeUsername,
     String? ipAddress,
     String? macAddress,
+    DateTime? openedAt,
+    DateTime? closedAt,
   }) async {
     try {
-      final logEntry = {
+      final logEntry = <String, dynamic>{
         'fingerprint': fingerprint,
         'action': action,
         'deviceKey': deviceKey,
@@ -95,6 +97,18 @@ class PiracyService {
         'timestamp': FieldValue.serverTimestamp(),
       };
 
+      if (openedAt != null) {
+        logEntry['openedAt'] = openedAt.toIso8601String();
+        logEntry['openedAtTimestamp'] = Timestamp.fromDate(openedAt);
+      }
+      if (closedAt != null) {
+        logEntry['closedAt'] = closedAt.toIso8601String();
+        logEntry['closedAtTimestamp'] = Timestamp.fromDate(closedAt);
+        if (openedAt != null) {
+          logEntry['sessionDurationSeconds'] = closedAt.difference(openedAt).inSeconds;
+        }
+      }
+
       // 1. Add to the dedicated file snail trail collection
       await _firestore
           .collection('gdrm_snail_trails')
@@ -103,14 +117,27 @@ class PiracyService {
           .add(logEntry)
           .timeout(const Duration(seconds: 4));
 
-      // 2. Update file summary document
-      await _firestore.collection('gdrm_snail_trails').doc(fingerprint).set({
+      // 2. Update file summary document with tamper tracking timestamps
+      final summaryUpdate = <String, dynamic>{
         'fingerprint': fingerprint,
         'lastAction': action,
         'lastDeviceKey': deviceKey,
         'lastUpdated': FieldValue.serverTimestamp(),
         'senderUsername': senderUsername ?? '',
-      }, SetOptions(merge: true)).timeout(const Duration(seconds: 4));
+      };
+      if (openedAt != null) {
+        summaryUpdate['lastOpenedAt'] = openedAt.toIso8601String();
+        summaryUpdate['lastOpenedTimestamp'] = Timestamp.fromDate(openedAt);
+      }
+      if (closedAt != null) {
+        summaryUpdate['lastClosedAt'] = closedAt.toIso8601String();
+        summaryUpdate['lastClosedTimestamp'] = Timestamp.fromDate(closedAt);
+      }
+
+      await _firestore.collection('gdrm_snail_trails').doc(fingerprint).set(
+        summaryUpdate,
+        SetOptions(merge: true),
+      ).timeout(const Duration(seconds: 4));
     } catch (e) {
       debugPrint('[PiracyService] Firestore SnailTrail record note: $e');
     }

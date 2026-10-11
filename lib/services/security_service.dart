@@ -14,6 +14,25 @@ class SecurityService {
     // Android: FLAG_SECURE is set natively in MainActivity.kt — nothing to do here
   }
 
+  /// Checks whether USB Debugging / ADB is active on the host Android device.
+  static Future<bool> isUsbDebuggingEnabled() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      final bool? isEnabled = await _channel.invokeMethod<bool>('isUsbDebuggingEnabled');
+      return isEnabled ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the device Developer Options settings page so the user can toggle off USB debugging.
+  static Future<void> openDeveloperSettings() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod('openDeveloperSettings');
+    } catch (_) {}
+  }
+
   static Future<void> _applyWindowsScreenshotPrevention() async {
     try {
       await _channel.invokeMethod('setSecureWindow');

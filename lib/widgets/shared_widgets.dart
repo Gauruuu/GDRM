@@ -183,12 +183,24 @@ class LabeledTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String? hint;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final String? prefixText;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
+  final bool readOnly;
 
   const LabeledTextField({
     super.key,
     required this.label,
     required this.controller,
     this.hint,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.prefixText,
+    this.keyboardType,
+    this.onChanged,
+    this.readOnly = false,
   });
 
   @override
@@ -209,8 +221,21 @@ class LabeledTextField extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          readOnly: readOnly,
           style: TextStyle(color: AppTheme.fgLight, fontSize: 13),
-          decoration: InputDecoration(hintText: hint),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixText: prefixText,
+            prefixStyle: TextStyle(
+              color: AppTheme.colorCyan,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+            suffixIcon: suffixIcon,
+          ),
           cursorColor: AppTheme.colorCyan,
         ),
       ],
@@ -237,32 +262,31 @@ class CyanActionButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: isLoading ? null : onTap,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: AppTheme.bgGlassPanel,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.7)),
+            color: AppTheme.primaryGreen,
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Center(
             child: isLoading
-                ? SizedBox(
+                ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppTheme.colorCyan,
+                      color: Colors.white,
                     ),
                   )
                 : Text(
                     label,
-                    style: TextStyle(
-                      color: AppTheme.colorCyan,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.3,
                     ),
                   ),
           ),
@@ -271,3 +295,195 @@ class CyanActionButton extends StatelessWidget {
     );
   }
 }
+
+// ── Dashed Container ─────────────────────────────────────────────────────────
+class DashedContainer extends StatelessWidget {
+  final Widget child;
+  final Color? color;
+  final double strokeWidth;
+  final double gap;
+  final double dash;
+  final BorderRadius borderRadius;
+
+  const DashedContainer({
+    super.key,
+    required this.child,
+    this.color,
+    this.strokeWidth = 1.5,
+    this.gap = 5.0,
+    this.dash = 6.0,
+    this.borderRadius = const BorderRadius.all(Radius.circular(8)),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        color: color ?? AppTheme.borderGlass,
+        strokeWidth: strokeWidth,
+        gap: gap,
+        dash: dash,
+        borderRadius: borderRadius,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double dash;
+  final BorderRadius borderRadius;
+
+  _DashedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.gap,
+    required this.dash,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = borderRadius.toRRect(Rect.fromLTWH(
+      strokeWidth / 2,
+      strokeWidth / 2,
+      size.width - strokeWidth,
+      size.height - strokeWidth,
+    ));
+
+    final path = Path()..addRRect(rrect);
+    final metrics = path.computeMetrics();
+
+    for (final metric in metrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final length = (distance + dash <= metric.length) ? dash : metric.length - distance;
+        canvas.drawPath(metric.extractPath(distance, distance + length), paint);
+        distance += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.borderRadius != borderRadius;
+}
+
+// ── GDRM V — The Milky Way Update Brand Assets ────────────────────────────────
+class GdrmVLogoBadge extends StatelessWidget {
+  final double size;
+  final bool showGlow;
+
+  const GdrmVLogoBadge({
+    super.key,
+    this.size = 48,
+    this.showGlow = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: showGlow
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                  blurRadius: size * 0.3,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Image.asset(
+          'assets/images/gdrm_v_emblem.png',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback vector rendering in case asset is loading
+            return Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: const Color(0xFF064E3B),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF10B981), width: 1.5),
+              ),
+              child: Center(
+                child: Text(
+                  'V',
+                  style: TextStyle(
+                    color: const Color(0xFF10B981),
+                    fontSize: size * 0.52,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class GdrmVWordmark extends StatelessWidget {
+  final double height;
+
+  const GdrmVWordmark({
+    super.key,
+    this.height = 36,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/gdrm_v_banner.png',
+      height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'GDRM',
+              style: TextStyle(
+                color: AppTheme.fgLight,
+                fontSize: height * 0.65,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'V',
+              style: TextStyle(
+                color: const Color(0xFF10B981),
+                fontSize: height * 0.75,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+

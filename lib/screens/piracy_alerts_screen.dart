@@ -1,16 +1,157 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../services/piracy_service.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'snail_trail_screen.dart';
 
 class PiracyAlertsScreen extends StatelessWidget {
-  final String senderUsername;
+  final String? senderUsername;
+  final bool isEmbedded;
 
-  const PiracyAlertsScreen({super.key, required this.senderUsername});
+  const PiracyAlertsScreen({
+    super.key,
+    this.senderUsername,
+    this.isEmbedded = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final effectiveUsername = senderUsername ?? state.cloudUsername ?? 'gauruu';
+
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Header (matches Page 3 & Page 6) ──
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            isEmbedded ? 32 : 24,
+            isEmbedded ? 32 : 16,
+            isEmbedded ? 32 : 24,
+            24,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Alerts',
+                      style: TextStyle(
+                        color: AppTheme.fgLight,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Unauthorized open attempts on files you created.',
+                      style: TextStyle(
+                        color: AppTheme.fgMuted,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (state.unreadPiracyAlertsCount > 0)
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: AppTheme.secondaryBtnBg,
+                    foregroundColor: AppTheme.fgLight,
+                    side: BorderSide(color: AppTheme.secondaryBtnBorder),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  icon: const Icon(Icons.done_all_rounded, size: 15),
+                  label: const Text('Mark all read', style: TextStyle(fontSize: 12)),
+                  onPressed: () async {
+                    await state.markAllPiracyAlertsRead();
+                  },
+                ),
+            ],
+          ),
+        ),
+
+        // ── List of Alerts ──
+        Expanded(
+          child: StreamBuilder<List<PiracyAlertItem>>(
+            stream: PiracyService.getPiracyAlertsStream(effectiveUsername),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: CircularProgressIndicator(color: AppTheme.primaryGreen),
+                );
+              }
+
+              final alerts = snapshot.data ?? [];
+
+              if (alerts.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.navActiveBg,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.shield_outlined,
+                          size: 44,
+                          color: AppTheme.isDark ? AppTheme.darkPrimaryGreen : AppTheme.lightPrimaryGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No Unauthorized Attempts',
+                        style: TextStyle(
+                          color: AppTheme.fgLight,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'All files created by @$effectiveUsername are secure.',
+                        style: TextStyle(color: AppTheme.fgMuted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isEmbedded ? 32 : 20,
+                  vertical: 8,
+                ),
+                itemCount: alerts.length,
+                itemBuilder: (context, index) {
+                  final alert = alerts[index];
+                  return _AlertCard(alert: alert);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+
+    if (isEmbedded) {
+      return Container(
+        color: AppTheme.bgMain,
+        child: content,
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.bgMain,
       appBar: AppBar(
@@ -20,286 +161,214 @@ class PiracyAlertsScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.fgLight, size: 18),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'SECURITY & PIRACY ALERTS',
+        title: Text(
+          'Alerts',
+          style: TextStyle(
+            color: AppTheme.fgLight,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: content,
+    );
+  }
+}
+
+class _AlertCard extends StatefulWidget {
+  final PiracyAlertItem alert;
+
+  const _AlertCard({required this.alert});
+
+  @override
+  State<_AlertCard> createState() => _AlertCardState();
+}
+
+class _AlertCardState extends State<_AlertCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final alert = widget.alert;
+    final formattedTime = DateFormat('dd MMM yyyy, HH:mm').format(alert.timestamp);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.bgGlassPanel,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: alert.isRead ? AppTheme.borderGlass : Colors.redAccent.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header row: Title & Date ──
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  alert.details.isNotEmpty
+                      ? alert.details
+                      : 'Unauthorized open attempt detected',
                   style: TextStyle(
                     color: AppTheme.fgLight,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.1,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
                   ),
-                ),
-              ],
-            ),
-            Text(
-              'Monitoring author: @${senderUsername.replaceAll('@', '')}',
-              style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Mark All as Read',
-            icon: Icon(Icons.done_all_rounded, color: AppTheme.colorCyan, size: 20),
-            onPressed: () async {
-              await PiracyService.markAllAlertsAsRead(senderUsername);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: AppTheme.bgGlassPanel,
-                    content: Text('All security alerts marked as read.',
-                        style: TextStyle(color: AppTheme.fgLight, fontSize: 12)),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<PiracyAlertItem>>(
-        stream: PiracyService.getPiracyAlertsStream(senderUsername),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator(color: AppTheme.colorCyan));
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 42),
-                    const SizedBox(height: 12),
-                    Text('Error loading piracy alerts',
-                        style: TextStyle(color: AppTheme.fgLight, fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 6),
-                    Text('${snapshot.error}',
-                        style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
-                        textAlign: TextAlign.center),
-                  ],
                 ),
               ),
-            );
-          }
+              const SizedBox(width: 16),
+              Text(
+                formattedTime,
+                style: TextStyle(
+                  color: AppTheme.fgMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
 
-          final alerts = snapshot.data ?? [];
+          // ── Meta info row: File, Recipient, Platform ──
+          Wrap(
+            spacing: 24,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _infoSegment('File', alert.fileName),
+              _infoSegment('Recipient', alert.licensedTo),
+              _infoSegment(
+                null,
+                alert.piratePlatform.isNotEmpty ? alert.piratePlatform : 'Unknown Platform',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-          if (alerts.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.greenAccent.withValues(alpha: 0.08),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
+          // ── Action Buttons ──
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppTheme.secondaryBtnBg,
+                  foregroundColor: AppTheme.fgLight,
+                  side: BorderSide(color: AppTheme.secondaryBtnBorder),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SnailTrailScreen(
+                        fileFingerprint: alert.fingerprint,
+                        logs: const [],
+                      ),
                     ),
-                    child: const Icon(Icons.shield_outlined, size: 48, color: Colors.greenAccent),
+                  );
+                },
+                child: const Text(
+                  'View trail',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+              InkWell(
+                onTap: () => setState(() => _expanded = !_expanded),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  child: Text(
+                    _expanded ? 'Hide forensics' : 'Forensic details',
+                    style: TextStyle(
+                      color: AppTheme.fgMuted,
+                      fontSize: 11.5,
+                      decoration: TextDecoration.underline,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Piracy Attempts Detected',
-                    style: TextStyle(color: AppTheme.fgLight, fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'All your authored files are secure and operating within licensed bounds.',
-                    style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
-                    textAlign: TextAlign.center,
-                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Expandable Forensic Details ──
+          if (_expanded) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.bgMain,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppTheme.borderGlass),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detailRow('Fingerprint', alert.fingerprint),
+                  _detailRow('IP Address', alert.pirateIp),
+                  _detailRow('MAC Address', alert.pirateMac),
+                  _detailRow('Device Key', alert.pirateDeviceKey),
+                  _detailRow('Pirate Account', alert.pirateUsername),
                 ],
               ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            itemCount: alerts.length,
-            itemBuilder: (context, index) {
-              final alert = alerts[index];
-              final formattedTime = DateFormat('dd MMM yyyy, HH:mm:ss').format(alert.timestamp);
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppTheme.bgGlassPanel,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: alert.isRead ? AppTheme.borderGlass : Colors.redAccent.withValues(alpha: 0.6),
-                    width: alert.isRead ? 1.0 : 1.5,
-                  ),
-                  boxShadow: alert.isRead
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: Colors.redAccent.withValues(alpha: 0.12),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.gpp_bad_rounded, color: Colors.redAccent, size: 12),
-                                SizedBox(width: 4),
-                                Text(
-                                  'PIRACY BREACH',
-                                  style: TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            formattedTime,
-                            style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        alert.details,
-                        style: TextStyle(
-                          color: AppTheme.fgLight,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Divider(color: AppTheme.borderGlass, height: 1),
-                      const SizedBox(height: 10),
-
-                      // Forensic grid
-                      _buildForensicRow(Icons.description_outlined, 'File Name', alert.fileName),
-                      _buildForensicRow(Icons.fingerprint, 'Fingerprint', alert.fingerprint, isMono: true),
-                      _buildForensicRow(Icons.person_pin_outlined, 'Licensed Recipient', alert.licensedTo),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'PIRATE FORENSIC METRICS',
-                        style: TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.bgMain,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppTheme.borderGlass),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildForensicRow(Icons.wifi_rounded, 'Pirate IP Address', alert.pirateIp, isMono: true, valueColor: Colors.orangeAccent),
-                            _buildForensicRow(Icons.router_rounded, 'Pirate MAC Address', alert.pirateMac, isMono: true, valueColor: Colors.orangeAccent),
-                            _buildForensicRow(Icons.computer_rounded, 'Pirate Platform/OS', alert.piratePlatform.toUpperCase()),
-                            _buildForensicRow(Icons.account_circle_outlined, 'Pirate Account', alert.pirateUsername),
-                            _buildForensicRow(Icons.memory_rounded, 'Pirate Device Key', alert.pirateDeviceKey, isMono: true),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          if (!alert.isRead)
-                            TextButton.icon(
-                              style: TextButton.styleFrom(foregroundColor: AppTheme.fgMuted),
-                              icon: const Icon(Icons.mark_email_read_outlined, size: 14),
-                              label: const Text('Mark Read', style: TextStyle(fontSize: 11)),
-                              onPressed: () => PiracyService.markAlertAsRead(alert.id),
-                            ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.colorCyan.withValues(alpha: 0.15),
-                              foregroundColor: AppTheme.colorCyan,
-                              elevation: 0,
-                              side: BorderSide(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            ),
-                            icon: const Icon(Icons.timeline_rounded, size: 14),
-                            label: const Text('View Full Snail Trail', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => SnailTrailScreen(
-                                    logs: const [],
-                                    fileFingerprint: alert.fingerprint,
-                                    senderUsername: senderUsername,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildForensicRow(IconData icon, String label, String value, {bool isMono = false, Color? valueColor}) {
+  Widget _infoSegment(String? label, String value) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (label != null)
+            TextSpan(
+              text: '$label: ',
+              style: TextStyle(
+                color: AppTheme.fgMuted,
+                fontSize: 12.5,
+              ),
+            ),
+          TextSpan(
+            text: value,
+            style: TextStyle(
+              color: AppTheme.fgLight,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 2,
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 13, color: AppTheme.fgMuted),
-          const SizedBox(width: 6),
-          Text(
-            '$label: ',
-            style: TextStyle(color: AppTheme.fgMuted, fontSize: 10),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
+            ),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                color: valueColor ?? AppTheme.fgLight,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                fontFamily: isMono ? 'monospace' : null,
+                color: AppTheme.fgLight,
+                fontSize: 11,
+                fontFamily: 'monospace',
               ),
               overflow: TextOverflow.ellipsis,
             ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/geo_data.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../widgets/shared_widgets.dart';
+import 'privacy_policy_screen.dart';
 
 class GlobalAuthScreen extends StatefulWidget {
   final bool startInRegisterMode;
@@ -18,7 +20,14 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
   final _nameCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+
+  String _selectedCountry = 'India';
+  String _selectedState = 'Delhi';
+  bool _obscurePassword = true;
+  bool _agreeToTerms = false;
 
   bool _isLoading = false;
   String? _statusMessage;
@@ -35,20 +44,54 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
     _nameCtrl.dispose();
     _usernameCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _cityCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  void _onCountryChanged(String? newCountry) {
+    if (newCountry == null) return;
+    setState(() {
+      _selectedCountry = newCountry;
+      final states = GeoLocationData.getStatesForCountry(newCountry);
+      _selectedState = states.isNotEmpty ? states.first : 'Other';
+    });
   }
 
   Future<void> _handleSubmit() async {
     final name = _nameCtrl.text.trim();
     final username = _usernameCtrl.text.trim().toLowerCase();
     final email = _emailCtrl.text.trim().toLowerCase();
+    final rawPhone = _phoneCtrl.text.trim();
+    final city = _cityCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
 
     if (_isRegisterMode) {
-      if (name.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty) {
+      if (name.isEmpty || username.isEmpty || email.isEmpty || rawPhone.isEmpty || city.isEmpty || password.isEmpty) {
         setState(() {
-          _statusMessage = 'All fields (Name, Username, Email, Password) are required.';
+          _statusMessage = 'All fields (Name, Username, Email, Mobile, Country, State, City, Password) are required.';
+          _statusColor = Colors.redAccent;
+        });
+        return;
+      }
+
+      if (!_agreeToTerms) {
+        setState(() {
+          _statusMessage = 'Please review and accept the Privacy Policy & Legal Terms to proceed.';
+          _statusColor = Colors.redAccent;
+        });
+        return;
+      }
+
+      // Format full phone with country calling code prefix
+      final countryCode = GeoLocationData.getPhoneCodeForCountry(_selectedCountry);
+      final formattedPhone = rawPhone.startsWith('+') ? rawPhone : '$countryCode$rawPhone';
+      final phoneDigitsOnly = formattedPhone.replaceAll(RegExp(r'\D'), '');
+
+      if (phoneDigitsOnly.length < 7 || phoneDigitsOnly.length > 15) {
+        setState(() {
+          _statusMessage = 'Please enter a valid mobile number (7-15 digits).';
           _statusColor = Colors.redAccent;
         });
         return;
@@ -86,12 +129,46 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
         return;
       }
 
+      // Pre-check username and phone uniqueness in Firestore before sending OTP
+      setState(() {
+        _isLoading = true;
+        _statusMessage = null;
+      });
+
+      final state = context.read<AppState>();
+      final preCheck = await state.checkRegistrationPreconditions(
+        username: username,
+        email: email,
+        phone: formattedPhone,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (preCheck == 'USERNAME_TAKEN') {
+        setState(() {
+          _statusMessage = 'Username @$username is already taken. Please pick another.';
+          _statusColor = Colors.redAccent;
+        });
+        return;
+      } else if (preCheck == 'PHONE_TAKEN') {
+        setState(() {
+          _statusMessage = 'This mobile number is already registered with another account.';
+          _statusColor = Colors.redAccent;
+        });
+        return;
+      }
+
       // Trigger registration email OTP verification directly
       await _showRegistrationOtpDialog(
         name: name,
         username: username,
         email: email,
         password: password,
+        phone: formattedPhone,
+        country: _selectedCountry,
+        stateRegion: _selectedState,
+        city: city,
       );
     } else {
       // ── Login Mode ──
@@ -131,8 +208,12 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
     required String username,
     required String email,
     required String password,
+    required String phone,
+    required String country,
+    required String stateRegion,
+    required String city,
   }) async {
-    final state = context.read<AppState>();
+    final appState = context.read<AppState>();
     final otpCtrl = TextEditingController();
     bool isSending = true;
     String? errorText;
@@ -145,7 +226,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
           builder: (ctx, setModalState) {
             if (isSending) {
               Future.microtask(() async {
-                final res = await state.sendRegistrationOtp(email);
+                final res = await appState.sendRegistrationOtp(email);
                 if (ctx.mounted) {
                   setModalState(() {
                     isSending = false;
@@ -239,7 +320,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                         isSending = true;
                         errorText = null;
                       });
-                      final res = await state.sendRegistrationOtp(email);
+                      final res = await appState.sendRegistrationOtp(email);
                       if (ctx.mounted) {
                         setModalState(() {
                           isSending = false;
@@ -266,7 +347,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                             setModalState(() => errorText = 'Please enter all 6 digits of the OTP code.');
                             return;
                           }
-                          final isValid = state.validateRegistrationOtp(code);
+                          final isValid = appState.validateRegistrationOtp(code);
                           if (!isValid) {
                             setModalState(() => errorText = 'Invalid or expired OTP code. Please try again.');
                             return;
@@ -274,11 +355,15 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
 
                           setModalState(() => isSending = true);
 
-                          final regResult = await state.registerOnCloud(
+                          final regResult = await appState.registerOnCloud(
                             name: name,
                             username: username,
                             email: email,
                             password: password,
+                            phone: phone,
+                            country: country,
+                            state: stateRegion,
+                            city: city,
                           );
 
                           if (regResult == 'SUCCESS') {
@@ -306,6 +391,10 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                                 errorText = 'Username @$username is already taken.';
                               } else if (regResult == 'EMAIL_TAKEN') {
                                 errorText = 'This email is already in use.';
+                              } else if (regResult == 'PHONE_TAKEN') {
+                                errorText = 'This mobile number is already registered with another account.';
+                              } else if (regResult == 'INVALID_PHONE_FORMAT') {
+                                errorText = 'Please enter a valid mobile number (7-15 digits).';
                               } else {
                                 errorText = regResult;
                               }
@@ -411,7 +500,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: isWide ? 24 : 16, vertical: 12),
           child: Container(
-            width: 440,
+            width: 480,
             padding: EdgeInsets.all(isWide ? 28 : 20),
             decoration: BoxDecoration(
               color: AppTheme.bgGlassSidebar,
@@ -423,28 +512,27 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppTheme.colorCyan.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.colorCyan.withValues(alpha: 0.4)),
-                    ),
-                    child: Icon(
-                      _isRegisterMode ? Icons.person_add_alt_1_rounded : Icons.shield_rounded,
-                      color: AppTheme.colorCyan,
-                      size: 26,
+                  child: const GdrmVLogoBadge(size: 60),
+                ),
+                const SizedBox(height: 12),
+                const Center(
+                  child: Text(
+                    'GDRM V — THE MILKY WAY UPDATE',
+                    style: TextStyle(
+                      color: Color(0xFF10B981),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 6),
                 Text(
                   _isRegisterMode ? 'CREATE GDRM IDENTITY' : 'GDRM SYSTEM LOGIN',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppTheme.fgLight,
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.1,
                   ),
@@ -542,6 +630,111 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                     label: 'Email Address',
                     controller: _emailCtrl,
                     hint: 'e.g. gaurav@example.com',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  LabeledTextField(
+                    label: 'Mobile Number (Unique)',
+                    controller: _phoneCtrl,
+                    hint: '9876543210',
+                    prefixText: '${GeoLocationData.getPhoneCodeForCountry(_selectedCountry)} ',
+                    keyboardType: TextInputType.phone,
+                  ),
+                  // ── Country -> State Selector ──
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 14),
+                            Text(
+                              'COUNTRY',
+                              style: TextStyle(
+                                color: AppTheme.fgMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppTheme.borderGlass),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedCountry,
+                                  isExpanded: true,
+                                  dropdownColor: AppTheme.bgGlassPanel,
+                                  style: TextStyle(color: AppTheme.fgLight, fontSize: 12),
+                                  icon: Icon(Icons.arrow_drop_down, color: AppTheme.colorCyan, size: 20),
+                                  items: GeoLocationData.countries.map((c) {
+                                    return DropdownMenuItem<String>(
+                                      value: c,
+                                      child: Text(c, overflow: TextOverflow.ellipsis),
+                                    );
+                                  }).toList(),
+                                  onChanged: _onCountryChanged,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 14),
+                            Text(
+                              'STATE / PROVINCE',
+                              style: TextStyle(
+                                color: AppTheme.fgMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppTheme.borderGlass),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedState,
+                                  isExpanded: true,
+                                  dropdownColor: AppTheme.bgGlassPanel,
+                                  style: TextStyle(color: AppTheme.fgLight, fontSize: 12),
+                                  icon: Icon(Icons.arrow_drop_down, color: AppTheme.colorCyan, size: 20),
+                                  items: GeoLocationData.getStatesForCountry(_selectedCountry).map((s) {
+                                    return DropdownMenuItem<String>(
+                                      value: s,
+                                      child: Text(s, overflow: TextOverflow.ellipsis),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => _selectedState = val);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  LabeledTextField(
+                    label: 'City',
+                    controller: _cityCtrl,
+                    hint: 'e.g. Mumbai, New York, London',
                   ),
                 ] else ...[
                   LabeledTextField(
@@ -552,10 +745,74 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                 ],
 
                 LabeledTextField(
-                  label: 'Account Password',
+                  label: _isRegisterMode ? 'Create Password' : 'Account Password',
                   controller: _passwordCtrl,
                   hint: '••••••••',
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: AppTheme.fgMuted,
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                  ),
                 ),
+
+                if (_isRegisterMode) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgMain.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _agreeToTerms
+                            ? AppTheme.colorCyan.withValues(alpha: 0.4)
+                            : AppTheme.borderGlass,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _agreeToTerms,
+                          activeColor: AppTheme.colorCyan,
+                          checkColor: Colors.black,
+                          side: BorderSide(color: AppTheme.borderGlass),
+                          onChanged: (val) => setState(() => _agreeToTerms = val ?? false),
+                        ),
+                        Expanded(
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                'I agree to the ',
+                                style: TextStyle(color: AppTheme.fgMuted, fontSize: 11),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                                  );
+                                },
+                                child: Text(
+                                  'Privacy Policy & Legal Terms',
+                                  style: TextStyle(
+                                    color: AppTheme.colorCyan,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 if (!_isRegisterMode) ...[
                   Align(
