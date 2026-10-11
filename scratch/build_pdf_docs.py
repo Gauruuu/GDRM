@@ -30,32 +30,32 @@ class NumberedCanvas(canvas.Canvas):
     def draw_page_decorations(self, page_count):
         self.saveState()
         
-        # Suppress running header/footer on cover / page 1
+        # Suppress running header/footer on cover (Page 1)
         if self._pageNumber > 1:
             # Running Header
             self.setFont("Helvetica-Bold", 8)
             self.setFillColor(colors.HexColor("#10b981"))
-            self.drawString(54, 11 * inch - 36, "GDRM V - THE MILKY WAY UPDATE")
+            self.drawString(45, 11 * inch - 30, "GDRM V - THE MILKY WAY UPDATE")
             
             self.setFont("Helvetica", 8)
             self.setFillColor(colors.HexColor("#64748b"))
-            self.drawRightString(8.5 * inch - 54, 11 * inch - 36, "Confidential Project Documentation - v5.0.0")
+            self.drawRightString(8.5 * inch - 45, 11 * inch - 30, "Confidential Project Documentation - v5.0.0")
             
             self.setStrokeColor(colors.HexColor("#cbd5e1"))
             self.setLineWidth(0.75)
-            self.line(54, 11 * inch - 42, 8.5 * inch - 54, 11 * inch - 42)
+            self.line(45, 11 * inch - 36, 8.5 * inch - 45, 11 * inch - 36)
 
             # Running Footer
             self.setStrokeColor(colors.HexColor("#cbd5e1"))
             self.setLineWidth(0.75)
-            self.line(54, 46, 8.5 * inch - 54, 46)
+            self.line(45, 38, 8.5 * inch - 45, 38)
 
             self.setFont("Helvetica", 8)
             self.setFillColor(colors.HexColor("#64748b"))
-            self.drawString(54, 32, "(c) 2026 GDRM Ecosystem - Architect: Gauraang Dalal - Zero-Trust DRM")
+            self.drawString(45, 26, "(c) 2026 GDRM Ecosystem - Architect: Gauraang Dalal - Zero-Trust DRM")
             
             page_str = f"Page {self._pageNumber} of {page_count}"
-            self.drawRightString(8.5 * inch - 54, 32, page_str)
+            self.drawRightString(8.5 * inch - 45, 26, page_str)
             
         self.restoreState()
 
@@ -64,8 +64,8 @@ def build_documentation_pdf(output_pdf_path):
     doc = SimpleDocTemplate(
         output_pdf_path,
         pagesize=letter,
-        leftMargin=50,
-        rightMargin=50,
+        leftMargin=45,
+        rightMargin=45,
         topMargin=40,
         bottomMargin=40
     )
@@ -101,11 +101,11 @@ def build_documentation_pdf(output_pdf_path):
         'DocH1',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=12.5,
-        leading=15.5,
+        fontSize=12,
+        leading=15,
         textColor=primary_color,
         spaceBefore=10,
-        spaceAfter=5,
+        spaceAfter=4,
         keepWithNext=True
     )
 
@@ -113,11 +113,11 @@ def build_documentation_pdf(output_pdf_path):
         'DocH2',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=10,
-        leading=13,
+        fontSize=9.5,
+        leading=12.5,
         textColor=accent_emerald,
-        spaceBefore=8,
-        spaceAfter=4,
+        spaceBefore=7,
+        spaceAfter=3,
         keepWithNext=True
     )
 
@@ -126,7 +126,7 @@ def build_documentation_pdf(output_pdf_path):
         parent=styles['Normal'],
         fontName='Helvetica',
         fontSize=8.5,
-        leading=12.5,
+        leading=12,
         textColor=text_dark,
         spaceAfter=4
     )
@@ -136,11 +136,11 @@ def build_documentation_pdf(output_pdf_path):
         parent=styles['Normal'],
         fontName='Helvetica',
         fontSize=8.5,
-        leading=12,
+        leading=11.8,
         textColor=text_dark,
         leftIndent=14,
         firstLineIndent=-10,
-        spaceAfter=3
+        spaceAfter=2.5
     )
 
     code_style = ParagraphStyle(
@@ -149,7 +149,16 @@ def build_documentation_pdf(output_pdf_path):
         fontName='Courier',
         fontSize=6.5,
         leading=8,
-        textColor=colors.HexColor("#f8fafc")
+        textColor=colors.HexColor("#38bdf8") # Bright Cyan for dark container
+    )
+
+    code_white_style = ParagraphStyle(
+        'DocCodeWhite',
+        parent=styles['Normal'],
+        fontName='Courier',
+        fontSize=6.5,
+        leading=8,
+        textColor=colors.HexColor("#f1f5f9")
     )
 
     meta_label = ParagraphStyle(
@@ -184,9 +193,22 @@ def build_documentation_pdf(output_pdf_path):
         parent=styles['Normal'],
         fontName='Helvetica',
         fontSize=7.5,
-        leading=10,
+        leading=9.5,
         textColor=text_dark
     )
+
+    def dark_code_box(content_str, text_style=code_style, width=7.25*inch):
+        p = Preformatted(content_str, text_style, maxLineLength=98)
+        t = Table([[p]], colWidths=[width])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#090e1a")),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#1e293b")),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        return t
 
     story = []
 
@@ -195,42 +217,42 @@ def build_documentation_pdf(output_pdf_path):
     # =========================================================
     emblem_path = "website/gdrm_v_emblem.png"
     if os.path.exists(emblem_path):
-        story.append(Image(emblem_path, width=0.9*inch, height=0.9*inch))
-        story.append(Spacer(1, 8))
+        story.append(Image(emblem_path, width=0.85*inch, height=0.85*inch))
+        story.append(Spacer(1, 6))
 
     story.append(Paragraph("GDRM V - THE MILKY WAY UPDATE", title_style))
     story.append(Paragraph("Granular Digital Right Manager Ecosystem (v5.0.0 Specification)", subtitle_style))
-    story.append(Paragraph("<b>Zero-Trust Cryptographic Document Security, Multi-Factor DRM & Anti-AI Replication Platform</b>", ParagraphStyle('Lead', fontName='Helvetica-Bold', fontSize=9.5, leading=13, textColor=text_dark)))
-    story.append(Spacer(1, 8))
+    story.append(Paragraph("<b>Zero-Trust Cryptographic Document Security, Multi-Factor DRM & Anti-AI Replication Platform</b>", ParagraphStyle('Lead', fontName='Helvetica-Bold', fontSize=9, leading=12.5, textColor=text_dark)))
+    story.append(Spacer(1, 6))
 
     # Metadata Grid
     meta_data = [
         [Paragraph("Release Version:", meta_label), Paragraph("5.0.0 (The Milky Way Update)", meta_val),
          Paragraph("Author & Architect:", meta_label), Paragraph("Gauraang Dalal", meta_val)],
         [Paragraph("Full Form:", meta_label), Paragraph("Granular Digital Right Manager (GDRM)", meta_val),
-         Paragraph("Core Stack:", meta_label), Paragraph("Flutter 3.x, C++ Win32, Skia/Impeller Canvas", meta_val)],
+         Paragraph("Core Stack:", meta_label), Paragraph("Flutter 3.x, C++ Win32 Subsystem, Skia/Impeller", meta_val)],
         [Paragraph("Cloud Infrastructure:", meta_label), Paragraph("Firebase Auth, Cloud Firestore Real-time DB", meta_val),
          Paragraph("Target Platforms:", meta_label), Paragraph("Windows x64, Android, macOS, Linux, iOS", meta_val)],
         [Paragraph("Classification:", meta_label), Paragraph("Confidential Enterprise DRM Specification", meta_val),
          Paragraph("Official Web Portal:", meta_label), Paragraph("https://gdrm.web.app", meta_val)]
     ]
-    meta_table = Table(meta_data, colWidths=[1.35*inch, 2.2*inch, 1.35*inch, 2.2*inch])
+    meta_table = Table(meta_data, colWidths=[1.35*inch, 2.25*inch, 1.35*inch, 2.3*inch])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
         ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#cbd5e1")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
     story.append(Paragraph("1. Executive Summary & Architectural Overview", h1_style))
     story.append(Paragraph(
-        "The <b>Granular Digital Right Manager (GDRM)</b> is a zero-trust, multi-factor document security platform "
-        "engineered to prevent unauthorized distribution, clipboard extraction, virtual PDF re-printing, memory snooping, "
+        "The <b>Granular Digital Right Manager (GDRM)</b> is a zero-trust, multi-factor document security ecosystem "
+        "engineered to prevent unauthorized distribution, clipboard exfiltration, virtual PDF re-printing, memory snooping, "
         "and the <b>\"Analog Hole\" (camera photography capture + generative AI watermark erasure / re-synthesis)</b>. "
         "Unlike legacy server-dependent DRM products, GDRM packages PDF payloads into autonomous, tamper-evident cryptographic "
         "binary containers (<b>.gdrm</b>).", body_style))
@@ -253,16 +275,16 @@ def build_documentation_pdf(output_pdf_path):
         "|   [FIREBASE CLOUD USERBASE]     <---------------------------  |        READER ENGINE          |   |\n"
         "|   * Firestore SnailTrail Stream     Real-time Piracy Alarms,  | * Motherboard UUID/MAC Lock   |   |\n"
         "|   * Phone & Identity Registry       Opening Telemetry & Auth  | * C2PA Multimodal AI Refusal  |   |\n"
-        "|   * Instant Machine Clones Ban                                | * Zero-Copy OS Input Sandbox  |   |\n"
-        "|                                                               | * Physical Spooler Whitelist  |   |\n"
+        "|   * Global FileRip Kill-Switch                                | * Zero-Copy OS Input Sandbox  |   |\n"
+        "|   * Instant Machine Clones Ban                                | * Physical Spooler Whitelist  |   |\n"
         "|                                                               +-------------------------------+   |\n"
         "+---------------------------------------------------------------------------------------------------+"
     )
-    story.append(Preformatted(arch_diagram, code_style, maxLineLength=95))
+    story.append(dark_code_box(arch_diagram, code_white_style))
     story.append(PageBreak())
 
     # =========================================================
-    # PAGE 2: ROADMAP & MATHEMATICAL CRYPTOGRAPHY
+    # PAGE 2: ROADMAP & COMPLETE FEATURES INDEX
     # =========================================================
     story.append(Paragraph("2. Complete Version Evolution & Roadmap History", h1_style))
     roadmap_data = [
@@ -273,47 +295,87 @@ def build_documentation_pdf(output_pdf_path):
         [Paragraph("<b>GDRM IV</b>", table_cell), Paragraph("Asteroid Belt", table_cell), Paragraph("Multimodal Visual AI Refusal Guardrails, C2PA Prompt-Injection Directives, Anti-Replication & Anti-Synthesis Anchors, balanced 20% opacity dynamic watermark with MAC/IP binding.", table_cell)],
         [Paragraph("<b>GDRM V</b>", table_cell), Paragraph("Milky Way <i>(Current)</i>", table_cell), Paragraph("<b>Universal Geographic Jurisdiction Cascades (Country/State/City)</b>, Unique Phone Number Registry & Validation, Minimal Geometric Insignia, Real-time OTA Notification Stream, Multi-Platform Releases.", table_cell)]
     ]
-    roadmap_table = Table(roadmap_data, colWidths=[1.0*inch, 1.3*inch, 4.8*inch])
+    roadmap_table = Table(roadmap_data, colWidths=[0.95*inch, 1.25*inch, 5.05*inch])
     roadmap_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), primary_color),
         ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#cbd5e1")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
     ]))
     story.append(roadmap_table)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    story.append(Paragraph("3. Mathematical Formalisms & Cryptographic Architecture", h1_style))
-    story.append(Paragraph("<b>3.1. Cryptographic Hash Primitives</b>", h2_style))
-    story.append(Paragraph("Let H(M) denote the standard SHA-256 cryptographic hash function outputting a 256-bit (32-byte) digest: <b>H(M) = SHA-256(M) in {0, 1}^256</b>. Hex(B) denotes lowercase hexadecimal encoding mapping byte array B to a string of length 2k.", body_style))
+    story.append(Paragraph("3. Comprehensive System Features Suite", h1_style))
+    features = [
+        ("1. Autonomous .gdrm Envelopes", "Zero cloud server dependency required for decryption once recipient authenticity is confirmed; self-contained tamper-evident binary manifest."),
+        ("2. Cloud Identity Locking", "Files are bound 1-to-1 to the recipient's Firebase UID and verified email. Unauthorized accounts or shared copies cannot decrypt."),
+        ("3. Motherboard UUID + MAC Anchor", "Locks container to host physical hardware on first open. Duplicating files to USB or other PCs fails hardware check and raises alarm."),
+        ("4. Global Cloud FileRip Kill-Switch", "Exceeding brute-force thresholds or triggering a publisher revocation instantly shreds local files AND globally revokes the document across all nodes."),
+        ("5. ChronoLock Ephemeral Time-Bombs", "Enforces access expiration and view countdown quotas. Decryption buffers are purged from RAM immediately upon timer expiration."),
+        ("6. Visual AI Refusal Guardrails", "Multi-modal visual prompt injection directives embedded into watermarks trigger AI safety refusal against OCR or generative re-synthesis."),
+        ("7. EURion Constellation Nodes", "Micro-geometric recognition patterns placed at watermark lattice nodes trigger anti-replication safeguards in desktop scanners and editors."),
+        ("8. Indelible 20% Dynamic Watermark", "Tiled at -26 deg matrix with verified username, IP, MAC, and timestamp for instant attribution without human reader eye strain."),
+        ("9. Zero-Copy OS Input Sandbox", "Low-level OS hooks intercept and suppress clipboard scraping, PrintScreen, Ctrl+C, Ctrl+A, and OS context menus."),
+        ("10. Hardware Spooler Protection", "Enumerates Win32/CUPS printer drivers, blocking virtual PDF export drivers (Print to PDF) while burning watermarks into physical spools."),
+        ("11. Universal Geographic Jurisdiction", "Hierarchical 3-tier geofence policy (Country > State > City) authorizing access only within permitted publisher territories."),
+        ("12. Unique Phone Number Registry", "Mandatory mobile phone validation prevents sybil identity creation, credential harvesting, and unauthorized account farming."),
+        ("13. Real-Time Cloud SnailTrail", "Cryptographic trail of every file open, authorization failure, and hardware mismatch synchronized to Cloud Firestore."),
+        ("14. Gmail SMTP Multi-Factor OTP", "Secure 6-digit one-time password gateway with concurrency mutex locks and rate-limiting to prevent duplicate dispatches.")
+    ]
+    for feat_title, feat_desc in features:
+        story.append(Paragraph(f"- <b>{feat_title}:</b> {feat_desc}", bullet_style))
 
-    story.append(Paragraph("<b>3.2. Machine Hardware Key Derivation</b>", h2_style))
-    story.append(Paragraph(
-        "Every host device running GDRM is assigned a persistent RFC 4122 Version 4 UUID <i>U</i>. "
-        "The Machine Hardware Key <i>K<sub>device</sub></i> is derived by hashing the hardware UUID salted with "
-        "the constant <code>GDRM_DEVICE_SALT_v1:</code> and truncating to the first 48 hex characters (192 bits of entropy):", body_style))
-    story.append(Paragraph("<b>K<sub>device</sub> = Hex(H(\"GDRM_DEVICE_SALT_v1:\" || U))[0:48]</b>", ParagraphStyle('Eq1', fontName='Courier-Bold', fontSize=8, leading=11, textColor=primary_color, leftIndent=14)))
-
-    story.append(Paragraph("<b>3.3. 512-Byte Cyclical Keystream Derivation Pipeline</b>", h2_style))
-    story.append(Paragraph(
-        "Payloads are protected using a 512-byte (4096-bit) cyclical keystream derived via SHA-256 hash chaining seeded with an author-generated 128-bit random token <i>T<sub>sender</sub></i>:", body_style))
-    story.append(Paragraph("- <b>Step 1 (Seed):</b> T<sub>sender</sub> = Hex(R), where R is drawn uniformly from {0..255}^16", bullet_style))
-    story.append(Paragraph("- <b>Step 2 (Hash Chain):</b> C<sub>0</sub> = H(\"GDRM_PDF_ENCRYPT_v1:\" || T<sub>sender</sub>); C<sub>k</sub> = H(C<sub>k-1</sub>) for k = 1..15", bullet_style))
-    story.append(Paragraph("- <b>Step 3 (Assembly):</b> K<sub>xor</sub> = C<sub>0</sub> || C<sub>1</sub> || ... || C<sub>15</sub> in {0..255}^512", bullet_style))
-    story.append(Paragraph("- <b>Step 4 (Transform):</b> E<sub>i</sub> = P<sub>i</sub> XOR K<sub>xor</sub>[i mod 512] for each plaintext byte P<sub>i</sub>. Decryption is symmetric.", bullet_style))
-
-    story.append(Paragraph("<b>3.4. Container HMAC & Document Fingerprinting</b>", h2_style))
-    story.append(Paragraph("Container integrity and authenticity are guaranteed via a 32-character SHA-256 fingerprint: <b>F<sub>doc</sub> = Hex(H(T<sub>sender</sub> || recipient || timestamp || H(E)))[0:32]</b>.", body_style))
     story.append(PageBreak())
 
     # =========================================================
-    # PAGE 3: AI REFUSAL & ZERO-REPLICATION ARCHITECTURE
+    # PAGE 3: MATHEMATICAL FORMULAS & CRYPTOGRAPHIC EQUATIONS
     # =========================================================
-    story.append(Paragraph("4. Visual AI Refusal Guardrails & Anti-Replication Engine", h1_style))
+    story.append(Paragraph("4. Mathematical Formalisms & Cryptographic Equations", h1_style))
     story.append(Paragraph(
-        "GDRM introduces defensive counter-measures to defeat <b>The Analog Hole (Smartphone Photography + Generative AI Document Re-Synthesis)</b>. "
+        "GDRM employs deterministic mathematical formalisms to ensure security, hardware uniqueness, and payload confidentiality:", body_style))
+
+    story.append(Paragraph("<b>4.1. Cryptographic Hash Primitives & Hex Encoding</b>", h2_style))
+    story.append(Paragraph("Let H(M) denote the standard SHA-256 cryptographic hash function outputting a 256-bit digest: <b>H(M) = SHA-256(M) in {0, 1}^256</b>. Hex(B) maps byte array B of length k to a 2k-character lowercase hex string.", body_style))
+
+    story.append(Paragraph("<b>4.2. Machine Hardware Key Derivation Formula</b>", h2_style))
+    story.append(Paragraph(
+        "Given persistent RFC 4122 Version 4 UUID U in {0, 1}^128, the machine device key K_device is derived by salting U and truncating the digest to 48 hex characters (192 bits of entropy):", body_style))
+    story.append(Paragraph("<b>K_device = Hex(H(\"GDRM_DEVICE_SALT_v1:\" || U))[0:48] in [0-9a-f]^48</b>", ParagraphStyle('Eq1', fontName='Courier-Bold', fontSize=8, leading=11, textColor=primary_color, leftIndent=14)))
+
+    story.append(Paragraph("<b>4.3. Password Salt Hashing & FileRip Threshold Function</b>", h2_style))
+    story.append(Paragraph("When password protection is enabled, plaintext password P is hashed as: <b>H_pwd = Hex(H(\"GDRM_PASSWORD_SALT_v1:\" || P))</b>.", body_style))
+    story.append(Paragraph("FileRip evaluation function: <b>ExecuteFileRip() = True if (CurrentFailedAttempts >= MaxAllowedAttempts)</b>.", body_style))
+
+    story.append(Paragraph("<b>4.4. 512-Byte Cyclical Keystream Derivation Pipeline</b>", h2_style))
+    story.append(Paragraph("To defeat frequency analysis without heavy cipher overhead, document payloads are encrypted with a 512-byte cyclical keystream derived via SHA-256 hash chaining:", body_style))
+    story.append(Paragraph("- <b>Seed Generation:</b> T_sender = Hex(R), where R is drawn uniformly from {0..255}^16", bullet_style))
+    story.append(Paragraph("- <b>Hash Chaining:</b> C_0 = H(\"GDRM_PDF_ENCRYPT_v1:\" || T_sender); C_k = H(C_{k-1}) for k in {1..15}", bullet_style))
+    story.append(Paragraph("- <b>Keystream Assembly:</b> K_xor = C_0 || C_1 || ... || C_15 in {0..255}^512", bullet_style))
+    story.append(Paragraph("- <b>Payload Encryption:</b> E_i = P_i XOR K_xor[i mod 512] for all i in {0..N-1}", bullet_style))
+    story.append(Paragraph("- <b>Symmetric Decryption:</b> P_i = E_i XOR K_xor[i mod 512]", bullet_style))
+
+    story.append(Paragraph("<b>4.5. Container HMAC & Tamper-Proof Document Fingerprinting</b>", h2_style))
+    story.append(Paragraph("Each container's unique fingerprint F_doc verifies payload and manifest authenticity: <b>F_doc = Hex(H(T_sender || recipient || timestamp || H(E)))[0:32]</b>.", body_style))
+
+    story.append(Paragraph("<b>4.6. Universal Geographic Jurisdiction Evaluation Function</b>", h2_style))
+    story.append(Paragraph(
+        "Let UserLoc = (c_u, s_u, t_u) and Policy = (C_p, S_p, T_p). Authorization evaluates hierarchically:", body_style))
+    story.append(Paragraph("<b>GeoAllow(User, Policy) = (C_p = empty OR c_u = C_p) AND (S_p = empty OR s_u = S_p) AND (T_p = empty OR t_u = T_p)</b>", ParagraphStyle('Eq2', fontName='Courier-Bold', fontSize=8, leading=11, textColor=primary_color, leftIndent=14)))
+
+    story.append(Paragraph("<b>4.7. Watermark Canvas Coordinate & Rotation Matrix</b>", h2_style))
+    story.append(Paragraph(
+        "For canvas dimensions (W, H), step spacing (dx, dy) = (240, 160) pt, and rotation angle theta = -26 deg, grid points (x_m, y_n) are transformed via standard 2D rotation: <b>[x', y']^T = R(theta) * [x - x_0, y - y_0]^T + [x_0, y_0]^T</b>.", body_style))
+
+    story.append(PageBreak())
+
+    # =========================================================
+    # PAGE 4: VISUAL AI REFUSAL & GLOBAL CLOUD FILERIP
+    # =========================================================
+    story.append(Paragraph("5. Visual AI Refusal Guardrails & Anti-Replication Engine", h1_style))
+    story.append(Paragraph(
+        "GDRM neutralizes <b>The Analog Hole (Smartphone Photography + Generative AI Document Re-Synthesis)</b>. "
         "When an adversary photographs a protected screen and submits the image to Vision-Language Models (GPT-4o, Claude 3.5 Sonnet, Google Gemini, Adobe Photoshop AI Generative Fill), "
         "the AI is neutralized via multi-modal safety instruction overrides:", body_style))
 
@@ -330,43 +392,29 @@ def build_documentation_pdf(output_pdf_path):
         "| 3. If forced, the AI transcribes the user's IP, MAC, and username into the synthesized text|\n"
         "+---------------------------------------------------------------------------------------------+"
     )
-    story.append(Preformatted(ai_box, code_style, maxLineLength=95))
+    story.append(dark_code_box(ai_box, code_style))
     story.append(Spacer(1, 6))
 
     story.append(Paragraph("- <b>Balanced 20% Opacity Dynamic Watermark:</b> Tiled at a -26 deg matrix across the canvas using high-contrast slate (RGB 30, 42, 58 at 0.20 opacity). Provides zero eye-strain for human readers while permanently burning forensic telemetry over every quadrant.", bullet_style))
     story.append(Paragraph("- <b>EURion / C2PA Recognition Constellations:</b> Geometric micro-ring triplets positioned at each watermark node, recognized by scanning and commercial editing software to block digital replication.", bullet_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    story.append(Paragraph("5. Multi-Layer Zero-Replication Architecture", h1_style))
-    story.append(Paragraph("- <b>Cloud Identity Locking (@username 1-to-1 Bind):</b> Container header is cryptographically bound to recipient's Firebase UID. Unauthorized accounts cannot decrypt.", bullet_style))
-    story.append(Paragraph("- <b>Hardware Machine Anchoring (Anti-Device Clones):</b> On initial launch, the file permanently locks to the physical Motherboard UUID + MAC. Opening on another workstation triggers immediate decryption abort and fires a high-priority Piracy Alarm.", bullet_style))
-    story.append(Paragraph("- <b>Zero-Copy OS-Level Defenses:</b> Text selection and right-click context menus are disabled. Keyboard shortcuts (Ctrl+C, Ctrl+A, Ctrl+X, Ctrl+Ins) are trapped and suppressed via low-level OS hooks.", bullet_style))
-    story.append(Paragraph("- <b>ChronoLock Ephemeral Self-Destruct:</b> Time-bomb countdowns and view quotas enforce ephemeral retention; decryption buffers are scrubbed from RAM upon expiration.", bullet_style))
+    story.append(Paragraph("6. Global Cloud FileRip & Remote Document Self-Destruction", h1_style))
+    story.append(Paragraph(
+        "GDRM integrates a synchronized <b>Cloud File Destruction Protocol</b>. When a file's security threshold is breached on any device, "
+        "or when a publisher issues an emergency remote revoke command:", body_style))
+    story.append(Paragraph("- <b>1. Local Overwrite & Shredding:</b> The local client immediately registers <code>FILERIP_TRIGGERED</code>, overwrites the ciphertext container with randomized entropy bytes, and deletes decrypted cache buffers from RAM.", bullet_style))
+    story.append(Paragraph("- <b>2. Instant Cloud Alarm Broadcast:</b> A high-priority payload is dispatched to Cloud Firestore (<code>gdrm_piracy_alerts</code>) containing the document fingerprint F_doc, pirate IP, MAC address, and hardware key.", bullet_style))
+    story.append(Paragraph("- <b>3. Global Kill-Switch Propagation:</b> In Firestore, the document's global fingerprint status is flagged as <code>DESTRUCTED / REVOKED</code>. Every workstation and mobile device in the ecosystem polling or opening any duplicate copy of that container detects the revocation flag and terminates access immediately.", bullet_style))
+    story.append(Paragraph("- <b>4. Universal Synchronization:</b> A breach on one device results in <b>universal permanent destruction across all devices globally</b>.", bullet_style))
+
     story.append(PageBreak())
 
     # =========================================================
-    # PAGE 4: JURISDICTION, PRINT SPOOLER & FIRESTORE SCHEMA
+    # PAGE 5: FIRESTORE SCHEMA, THREAT MATRIX & RELEASES
     # =========================================================
-    story.append(Paragraph("6. Universal Geographic Jurisdiction Cascades & Phone Registry (New in V)", h1_style))
-    story.append(Paragraph(
-        "The Milky Way Update (v5.0) introduces <b>Universal Geographic Jurisdiction Cascades</b>. Publishers can restrict document access "
-        "based on geographic boundaries with 3-tier hierarchy resolution: <code>Country &gt; State &gt; City</code>. "
-        "Access is evaluated at runtime against verified user telemetry and device geolocation.", body_style))
-    story.append(Paragraph(
-        "Additionally, GDRM V enforces a <b>Unique Phone Number Registry</b>. User accounts must link and verify an active phone number, "
-        "preventing sybil account creation, throwaway credential farming, and automated scraping attacks.", body_style))
-    story.append(Spacer(1, 8))
-
-    story.append(Paragraph("7. Hardware Print Spooler with Virtual Driver Interception", h1_style))
-    story.append(Paragraph(
-        "GDRM provides secure physical printing while intercepting virtual PDF export attacks:", body_style))
-    story.append(Paragraph("- <b>Virtual Driver Blacklist:</b> Interrogates Win32 / CUPS printer drivers and outright blocks <code>Microsoft Print to PDF</code>, <code>Adobe PDF</code>, <code>CutePDF</code>, <code>Foxit PDF Printer</code>, <code>OneNote</code>, and <code>Print to File</code>.", bullet_style))
-    story.append(Paragraph("- <b>100% True-Scale Paper Fit:</b> Renders pages with exact 1:1 postscript point accuracy (595.28 x 841.89 pt for ISO A4).", bullet_style))
-    story.append(Paragraph("- <b>Spool Watermark Burning:</b> Injects indelible anti-leak watermark with recipient telemetry directly into the printer spool stream before sending to hardware.", bullet_style))
-    story.append(Spacer(1, 8))
-
-    story.append(Paragraph("8. Cloud Infrastructure & Firestore Database Schema", h1_style))
-    story.append(Paragraph("<b>Collection: gdrm_snail_trails (Audit Logging)</b>", h2_style))
+    story.append(Paragraph("7. Cloud Infrastructure & Firestore Database Schema", h1_style))
+    story.append(Paragraph("<b>Collection: gdrm_snail_trails (Telemetry Audit Stream)</b>", h2_style))
     snail_schema = (
         "{\n"
         "  \"fingerprint\": \"7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c\",\n"
@@ -381,10 +429,10 @@ def build_documentation_pdf(output_pdf_path):
         "  \"timestamp\": \"2026-10-11T12:00:00.000Z\"\n"
         "}"
     )
-    story.append(Preformatted(snail_schema, code_style, maxLineLength=95))
+    story.append(dark_code_box(snail_schema, code_style))
     story.append(Spacer(1, 4))
 
-    story.append(Paragraph("<b>Collection: gdrm_piracy_alerts (Machine Clone Detections)</b>", h2_style))
+    story.append(Paragraph("<b>Collection: gdrm_piracy_alerts (Machine Clone Detections & FileRip)</b>", h2_style))
     alert_schema = (
         "{\n"
         "  \"fingerprint\": \"7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c\",\n"
@@ -394,19 +442,16 @@ def build_documentation_pdf(output_pdf_path):
         "  \"pirateDeviceKey\": \"ffffffffffffffffffffffffffffffffffffffffffffffff\",\n"
         "  \"pirateIp\": \"203.0.113.195\",\n"
         "  \"pirateMac\": \"00:1A:2B:3C:4D:5E\",\n"
-        "  \"action\": \"HARDWARE_MISMATCH\",\n"
-        "  \"details\": \"Machine clone attempt detected on unauthorized motherboard hardware\",\n"
+        "  \"action\": \"FILERIP_TRIGGERED\",\n"
+        "  \"details\": \"Brute-force limit exceeded; global file destruction broadcasted\",\n"
         "  \"isRead\": false,\n"
         "  \"timestamp\": \"2026-10-11T12:00:12.000Z\"\n"
         "}"
     )
-    story.append(Preformatted(alert_schema, code_style, maxLineLength=95))
-    story.append(PageBreak())
+    story.append(dark_code_box(alert_schema, code_style))
+    story.append(Spacer(1, 8))
 
-    # =========================================================
-    # PAGE 5: COMPARATIVE MATRIX & PRODUCTION RELEASES
-    # =========================================================
-    story.append(Paragraph("9. Threat Model & Comparative Security Matrix", h1_style))
+    story.append(Paragraph("8. Threat Model & Comparative Security Matrix", h1_style))
     matrix_data = [
         [Paragraph("Threat Attack Vector", table_header), Paragraph("Standard PDF", table_header), Paragraph("Enterprise IRM (Azure)", table_header), Paragraph("GDRM V (Milky Way)", table_header)],
         [Paragraph("<b>Password Sharing / Distribution</b>", table_cell), Paragraph("Trivial once shared", table_cell), Paragraph("Requires org account", table_cell), Paragraph("<b>Cryptographic 1-to-1 Recipient + Hardware UUID Lock</b>", table_cell)],
@@ -415,27 +460,28 @@ def build_documentation_pdf(output_pdf_path):
         [Paragraph("<b>Virtual Print-to-PDF Theft</b>", table_cell), Paragraph("Generates clean PDF", table_cell), Paragraph("Partial driver filter", table_cell), Paragraph("<b>Driver Enum Blacklist + Indelible Spool Burning</b>", table_cell)],
         [Paragraph("<b>Offline Brute-Force Cracking</b>", table_cell), Paragraph("Hashcat vulnerable", table_cell), Paragraph("Cloud-only dependency", table_cell), Paragraph("<b>FileRip Self-Destruct + 512-Byte Cyclical Keystream</b>", table_cell)],
         [Paragraph("<b>Camera Capture & AI Inpainting</b>", table_cell), Paragraph("Easily inpainted", table_cell), Paragraph("Static watermark gone", table_cell), Paragraph("<b>C2PA Prompt-Injection AI Refusal + 20% Dynamic Grid</b>", table_cell)],
-        [Paragraph("<b>Jurisdiction & Phone Security</b>", table_cell), Paragraph("No protection", table_cell), Paragraph("IP geofence only", table_cell), Paragraph("<b>3-Tier Cascading Geo-Rule + Verified Phone Registry</b>", table_cell)]
+        [Paragraph("<b>Jurisdiction & Phone Security</b>", table_cell), Paragraph("No protection", table_cell), Paragraph("IP geofence only", table_cell), Paragraph("<b>3-Tier Cascading Geo-Rule + Verified Phone Registry</b>", table_cell)],
+        [Paragraph("<b>Global Remote File Revocation</b>", table_cell), Paragraph("Impossible once shared", table_cell), Paragraph("Partial server revoke", table_cell), Paragraph("<b>Global Cloud FileRip Shredding across All Clones</b>", table_cell)]
     ]
-    matrix_table = Table(matrix_data, colWidths=[1.8*inch, 1.4*inch, 1.6*inch, 2.3*inch])
+    matrix_table = Table(matrix_data, colWidths=[1.8*inch, 1.35*inch, 1.55*inch, 2.55*inch])
     matrix_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), primary_color),
         ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#cbd5e1")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
     ]))
     story.append(matrix_table)
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 8))
 
-    story.append(Paragraph("10. Production Release Artifacts & Official Links", h1_style))
+    story.append(Paragraph("9. Production Release Artifacts & Official Links", h1_style))
     story.append(Paragraph("- <b>Windows Desktop Installer (x64):</b> Available via Google Drive distribution: <code>https://drive.google.com/file/d/1GXU17W8v4nuSH3YXnZtUgHphUYYxftuE/view?usp=sharing</code>", bullet_style))
     story.append(Paragraph("- <b>Android Application (APK):</b> Available via Google Drive distribution: <code>https://drive.google.com/file/d/1L73CUd3kTS2CUkZcBhH1AtvI2xJNSSZ3/view?usp=drive_link</code>", bullet_style))
     story.append(Paragraph("- <b>Official Web Portal & Ecosystem Documentation:</b> Hosted and secured on Firebase Hosting: <code>https://gdrm.web.app</code>", bullet_style))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 8))
 
-    story.append(Paragraph("<b>Document Certification & Integrity Seal:</b>", ParagraphStyle('Seal', fontName='Helvetica-Bold', fontSize=9, leading=12, textColor=primary_color)))
+    story.append(Paragraph("<b>Document Certification & Integrity Seal:</b>", ParagraphStyle('Seal', fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=primary_color)))
     story.append(Paragraph("This document contains the official architectural, cryptographic, and operational specification for the GDRM V Milky Way release. All mathematical formalisms, threat models, and code artifacts have been authored by Gauraang Dalal.", body_style))
 
     # Build PDF

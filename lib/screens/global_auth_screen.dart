@@ -216,6 +216,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
     final appState = context.read<AppState>();
     final otpCtrl = TextEditingController();
     bool isSending = true;
+    bool hasInitiated = false;
     String? errorText;
 
     showDialog(
@@ -224,9 +225,9 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
       builder: (dialogCtx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            if (isSending) {
-              Future.microtask(() async {
-                final res = await appState.sendRegistrationOtp(email);
+            if (!hasInitiated) {
+              hasInitiated = true;
+              appState.sendRegistrationOtp(email).then((res) {
                 if (ctx.mounted) {
                   setModalState(() {
                     isSending = false;
@@ -320,7 +321,7 @@ class _GlobalAuthScreenState extends State<GlobalAuthScreen> {
                         isSending = true;
                         errorText = null;
                       });
-                      final res = await appState.sendRegistrationOtp(email);
+                      final res = await appState.sendRegistrationOtp(email, forceNew: true);
                       if (ctx.mounted) {
                         setModalState(() {
                           isSending = false;

@@ -549,6 +549,7 @@ class AccountProfileDialog extends StatelessWidget {
     final email = state.cloudEmail ?? '';
     final otpCtrl = TextEditingController();
     bool isSending = true;
+    bool hasInitiated = false;
     String? errorText;
 
     showDialog(
@@ -557,9 +558,9 @@ class AccountProfileDialog extends StatelessWidget {
       builder: (dialogCtx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
-            if (isSending) {
-              Future.microtask(() async {
-                final res = await state.sendVerificationOtpEmail();
+            if (!hasInitiated) {
+              hasInitiated = true;
+              state.sendVerificationOtpEmail().then((res) {
                 if (ctx.mounted) {
                   setModalState(() {
                     isSending = false;
@@ -653,14 +654,14 @@ class AccountProfileDialog extends StatelessWidget {
                         isSending = true;
                         errorText = null;
                       });
-                      final res = await state.sendVerificationOtpEmail();
+                      final res = await state.sendVerificationOtpEmail(forceNew: true);
                       if (ctx.mounted) {
                         setModalState(() {
                           isSending = false;
                           if (res != 'SUCCESS') {
                             errorText = res;
                           } else {
-                            errorText = 'A new code has been sent!';
+                            errorText = 'A fresh code has been sent!';
                           }
                         });
                       }

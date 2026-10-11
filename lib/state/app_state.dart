@@ -519,8 +519,22 @@ class AppState extends ChangeNotifier {
   String? _pendingDeleteOtp;
   DateTime? _deleteOtpExpiry;
 
+  bool _isSendingRegOtp = false;
+  bool _isSendingVerificationOtp = false;
+  DateTime? _lastRegOtpSentTime;
+  DateTime? _lastVerificationOtpSentTime;
+
   /// Sends a 6-digit OTP to the prospective user's email via Gmail SMTP during registration.
-  Future<String> sendRegistrationOtp(String email) async {
+  Future<String> sendRegistrationOtp(String email, {bool forceNew = false}) async {
+    if (_isSendingRegOtp) {
+      return 'SUCCESS'; // Operation already actively in-flight
+    }
+    // Rate limit duplicate calls within 15 seconds unless explicitly forced via Resend
+    if (!forceNew && _lastRegOtpSentTime != null && DateTime.now().difference(_lastRegOtpSentTime!).inSeconds < 15) {
+      return 'SUCCESS';
+    }
+
+    _isSendingRegOtp = true;
     try {
       final clean = email.trim().toLowerCase();
       if (clean.isEmpty || !clean.contains('@')) {
@@ -530,6 +544,7 @@ class AppState extends ChangeNotifier {
       final otp = SmtpEmailService.generateOtp();
       _pendingRegOtp = otp;
       _regOtpExpiry = DateTime.now().add(const Duration(minutes: 10));
+      _lastRegOtpSentTime = DateTime.now();
 
       final success = await SmtpEmailService.sendOtp(
         recipientEmail: clean,
@@ -545,6 +560,8 @@ class AppState extends ChangeNotifier {
       }
     } catch (e) {
       return 'Error sending verification code: $e';
+    } finally {
+      _isSendingRegOtp = false;
     }
   }
 
@@ -560,7 +577,16 @@ class AppState extends ChangeNotifier {
   }
 
   /// Sends a 6-digit OTP to the user's email via Gmail SMTP for email verification.
-  Future<String> sendVerificationOtpEmail() async {
+  Future<String> sendVerificationOtpEmail({bool forceNew = false}) async {
+    if (_isSendingVerificationOtp) {
+      return 'SUCCESS'; // Operation already actively in-flight
+    }
+    // Rate limit duplicate calls within 15 seconds unless explicitly forced via Resend
+    if (!forceNew && _lastVerificationOtpSentTime != null && DateTime.now().difference(_lastVerificationOtpSentTime!).inSeconds < 15) {
+      return 'SUCCESS';
+    }
+
+    _isSendingVerificationOtp = true;
     try {
       final email = cloudEmail ?? FirebaseAuth.instance.currentUser?.email;
       if (email == null || email.isEmpty) {
@@ -570,6 +596,7 @@ class AppState extends ChangeNotifier {
       final otp = SmtpEmailService.generateOtp();
       _pendingVerificationOtp = otp;
       _verificationOtpExpiry = DateTime.now().add(const Duration(minutes: 10));
+      _lastVerificationOtpSentTime = DateTime.now();
 
       final success = await SmtpEmailService.sendOtp(
         recipientEmail: email,
@@ -585,6 +612,8 @@ class AppState extends ChangeNotifier {
       }
     } catch (e) {
       return 'Error sending OTP: $e';
+    } finally {
+      _isSendingVerificationOtp = false;
     }
   }
 
