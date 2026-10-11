@@ -27,6 +27,7 @@
         <a href="#downloads">Downloads</a>
         <a href="#features">Security Features</a>
         <a href="#architecture">Architecture</a>
+        <a href="javascript:void(0)" onclick="openFundingModal('GDRM Ecosystem', 'Core Research, Platform Ports & Developer Infrastructure')">Sponsor</a>
         <a href="privacy_policy.html" target="_blank">Privacy & Legal</a>
       </nav>
       <div class="nav-action">
@@ -281,6 +282,7 @@
       <div class="footer-links">
         <a href="#features">Security Features</a>
         <a href="#architecture">Architecture</a>
+        <a href="javascript:void(0)" onclick="openFundingModal('GDRM Ecosystem', 'Core Research, Platform Ports & Developer Infrastructure')">Sponsor Development</a>
         <a href="privacy_policy.html" target="_blank">Privacy & Legal Terms</a>
         <a href="#downloads">Download App</a>
       </div>
@@ -301,16 +303,45 @@
         <div class="modal-alert">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-amber); flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <div>
-            <strong>Community Sponsorship Needed</strong>
+            <strong>Community Sponsorship & Grants</strong>
             <p id="modalRequirementText" style="margin-top: 4px; font-size: 13px; color: #a1a1aa;">This platform requires dedicated developer license funding and packaging maintainers.</p>
           </div>
         </div>
-        <p style="font-size: 14px; line-height: 1.5; color: #d4d4d8; margin-top: 14px;">
-          GDRM is an open, university competition-grade research project presented at Avishkar. Backing this platform helps us secure official Apple Developer certificates ($99/yr), Linux CI infrastructure, and enterprise deployment keys.
+
+        <p style="font-size: 13px; line-height: 1.5; color: #94a3b8; margin: 12px 0 4px;">
+          Scan the QR code with any UPI app to fund platform ports and core infrastructure development.
         </p>
-        <div class="sponsor-options">
-          <a href="mailto:gauraangdalal@gmail.com?subject=GDRM%20Platform%20Sponsorship" class="btn btn-amber btn-block">
-            Contact Gauraang Dalal to Sponsor
+
+        <!-- QR Code Card -->
+        <div class="qr-container">
+          <div class="qr-card">
+            <img src="upi_sponsor_qr.jpg" alt="UPI Sponsor QR Code - Gaurang Deepak Dalal" class="sponsor-qr-img">
+            <div class="upi-id-box">
+              <span class="upi-id-label">UPI ID</span>
+              <code class="upi-id-text" id="upiIdText">9730576359@ptyes</code>
+              <button class="btn-copy-upi" onclick="copyUpiId()" title="Copy UPI ID" id="copyUpiBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span id="copyBtnLabel">Copy</span>
+              </button>
+            </div>
+            <div class="upi-apps-row">
+              <span class="upi-badge">Paytm</span>
+              <span class="upi-badge">PhonePe</span>
+              <span class="upi-badge">GPay</span>
+              <span class="upi-badge">BHIM</span>
+              <span class="upi-badge">Any UPI</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sponsor-actions">
+          <a id="payUpiDeepLink" href="upi://pay?pa=9730576359@ptyes&pn=Gaurang%20Deepak%20Dalal&cu=INR&tn=GDRM%20Sponsorship" class="btn btn-primary btn-block upi-pay-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Pay Directly via UPI App
+          </a>
+          <a href="mailto:gauraangdalal@gmail.com?subject=GDRM%20Platform%20Sponsorship" class="btn btn-outline btn-block" style="font-size: 13px; padding: 10px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Contact via Email (International / Wire Grants)
           </a>
         </div>
       </div>
@@ -321,10 +352,21 @@
     function openFundingModal(platform, requirement) {
       document.getElementById('modalPlatformTitle').innerText = 'Back the ' + platform + ' Port';
       document.getElementById('modalRequirementText').innerText = requirement;
+      document.getElementById('payUpiDeepLink').href = 'upi://pay?pa=9730576359@ptyes&pn=Gaurang%20Deepak%20Dalal&cu=INR&tn=' + encodeURIComponent('GDRM ' + platform + ' Sponsorship');
       document.getElementById('fundingModal').style.display = 'flex';
     }
     function closeFundingModal() {
       document.getElementById('fundingModal').style.display = 'none';
+    }
+    function copyUpiId() {
+      const upiId = document.getElementById('upiIdText').innerText.trim();
+      navigator.clipboard.writeText(upiId).then(() => {
+        const label = document.getElementById('copyBtnLabel');
+        label.innerText = 'Copied!';
+        setTimeout(() => { label.innerText = 'Copy'; }, 2000);
+      }).catch(() => {
+        prompt('Copy UPI ID:', upiId);
+      });
     }
     window.onclick = function(event) {
       if (event.target == document.getElementById('fundingModal')) {

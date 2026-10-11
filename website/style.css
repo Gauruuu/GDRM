@@ -698,14 +698,127 @@ body {
 }
 
 .modal-box {
-  background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #0b1329;
+  border: 1px solid rgba(16, 185, 129, 0.25);
   border-radius: var(--radius-lg);
-  max-width: 520px;
+  max-width: 480px;
+  max-height: 92vh;
+  overflow-y: auto;
   width: 100%;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-  overflow: hidden;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.8), 0 0 40px rgba(16, 185, 129, 0.1);
   animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 16px 0 10px;
+}
+
+.qr-card {
+  background: #020617;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.sponsor-qr-img {
+  width: 100%;
+  max-width: 250px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: block;
+}
+
+.upi-id-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 290px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-top: 14px;
+  gap: 8px;
+}
+
+.upi-id-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #10b981;
+}
+
+.upi-id-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.btn-copy-upi {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-copy-upi:hover {
+  background: #10b981;
+  color: #000;
+  border-color: #10b981;
+}
+
+.upi-apps-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.upi-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.sponsor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.upi-pay-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 @keyframes modalIn {
